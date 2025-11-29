@@ -1,0 +1,5 @@
+{
+  "name": "Occupational Health System",
+  "description": "A comprehensive occupational health management system for tracking worker health, audiometry, spirometry, and providing AI-assisted health analysis.",
+  "requestFramePermissions": []
+}
