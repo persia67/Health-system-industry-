@@ -12,6 +12,7 @@ import Login from './components/Login';
 import LicenseActivation from './components/LicenseActivation';
 import UserManagement from './components/UserManagement';
 import DataManagementModal from './components/DataManagementModal';
+import ThemeToggle from './components/ThemeToggle';
 import { generateId, toJalali } from './utils';
 import { AuthService } from './services/authService';
 import { StorageService } from './services/storageService';
@@ -135,6 +136,22 @@ const App = () => {
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [isGeneratingRecommendation, setIsGeneratingRecommendation] = useState(false);
   
+  // Theme State
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('ohs_theme') as 'light'|'dark') || 'dark';
+  });
+
+  const isDark = theme === 'dark';
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('ohs_theme', theme);
+  }, [theme]);
+
   // Modals / Dialogs state
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showEditWorkerModal, setShowEditWorkerModal] = useState(false);
@@ -442,14 +459,14 @@ const App = () => {
   // --- Doctor Views vs Health Officer vs Manager Logic ---
   const renderNav = () => {
       const baseNav = (
-          <button onClick={() => setActiveTab('search')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'search' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}><Search className="w-5 h-5" />جستجو</button>
+          <button onClick={() => setActiveTab('search')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'search' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><Search className="w-5 h-5" />جستجو</button>
       );
 
       if (user.role === 'manager' || user.role === 'developer') {
           return (
               <>
-                <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}><Activity className="w-5 h-5" />داشبورد کل</button>
-                <button onClick={() => setActiveTab('user_management')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'user_management' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}><Users className="w-5 h-5" />مدیریت کاربران</button>
+                <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><Activity className="w-5 h-5" />داشبورد کل</button>
+                <button onClick={() => setActiveTab('user_management')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'user_management' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><Users className="w-5 h-5" />مدیریت کاربران</button>
                 {baseNav}
               </>
           );
@@ -458,33 +475,33 @@ const App = () => {
       if (user.role === 'health_officer') {
           return (
               <>
-                <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}><Activity className="w-5 h-5" />داشبورد</button>
+                <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><Activity className="w-5 h-5" />داشبورد</button>
                 {baseNav}
-                <button onClick={() => setActiveTab('newWorker')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'newWorker' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}><UserPlus className="w-5 h-5" />ثبت پرسنل</button>
+                <button onClick={() => setActiveTab('newWorker')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'newWorker' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><UserPlus className="w-5 h-5" />ثبت پرسنل</button>
               </>
           );
       } else {
           // Doctor
            return (
               <>
-                <button onClick={() => setActiveTab('worklist')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'worklist' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}><ListChecks className="w-5 h-5" />کارتابل پزشک</button>
+                <button onClick={() => setActiveTab('worklist')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'worklist' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><ListChecks className="w-5 h-5" />کارتابل پزشک</button>
                 {baseNav}
-                <button onClick={() => setActiveTab('newExam')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'newExam' ? 'bg-cyan-600 text-white' : 'bg-slate-800 text-slate-400'}`}><Plus className="w-5 h-5" />معاینه جدید</button>
+                <button onClick={() => setActiveTab('newExam')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'newExam' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><Plus className="w-5 h-5" />معاینه جدید</button>
               </>
           );
       }
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans" dir="rtl">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300" dir="rtl">
       
       {/* Confirm Save Dialog */}
       {showConfirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-sm w-full">
-            <h3 className="text-xl font-bold text-white mb-2 text-center">تایید ثبت اطلاعات</h3>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 text-center">تایید ثبت اطلاعات</h3>
             <div className="flex gap-3 mt-6">
-                <button onClick={() => setShowConfirmDialog(false)} className="flex-1 p-2 rounded-xl bg-slate-800 text-slate-300">خیر</button>
+                <button onClick={() => setShowConfirmDialog(false)} className="flex-1 p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">خیر</button>
                 <button onClick={handleConfirmSaveExam} className="flex-1 p-2 rounded-xl bg-emerald-600 text-white font-bold">بله</button>
             </div>
           </div>
@@ -494,12 +511,12 @@ const App = () => {
       {/* Edit Worker Modal */}
       {showEditWorkerModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-md w-full">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-6 max-w-md w-full">
             <div className="flex justify-between mb-4"><h3 className="text-xl font-bold">ویرایش پرسنل</h3><X onClick={() => setShowEditWorkerModal(false)} className="cursor-pointer"/></div>
             <div className="space-y-4">
-                <input value={editWorkerData.name} onChange={(e) => setEditWorkerData({...editWorkerData, name: e.target.value})} className="w-full bg-slate-800 p-3 rounded-lg text-white" placeholder="نام" />
-                <input value={editWorkerData.department} onChange={(e) => setEditWorkerData({...editWorkerData, department: e.target.value})} className="w-full bg-slate-800 p-3 rounded-lg text-white" placeholder="واحد" />
-                <input type="number" value={editWorkerData.workYears} onChange={(e) => setEditWorkerData({...editWorkerData, workYears: Number(e.target.value)})} className="w-full bg-slate-800 p-3 rounded-lg text-white" placeholder="سابقه" />
+                <input value={editWorkerData.name} onChange={(e) => setEditWorkerData({...editWorkerData, name: e.target.value})} className="w-full bg-slate-100 dark:bg-slate-800 p-3 rounded-lg text-slate-900 dark:text-white" placeholder="نام" />
+                <input value={editWorkerData.department} onChange={(e) => setEditWorkerData({...editWorkerData, department: e.target.value})} className="w-full bg-slate-100 dark:bg-slate-800 p-3 rounded-lg text-slate-900 dark:text-white" placeholder="واحد" />
+                <input type="number" value={editWorkerData.workYears} onChange={(e) => setEditWorkerData({...editWorkerData, workYears: Number(e.target.value)})} className="w-full bg-slate-100 dark:bg-slate-800 p-3 rounded-lg text-slate-900 dark:text-white" placeholder="سابقه" />
                 <button onClick={handleUpdateWorker} className="w-full bg-cyan-600 p-3 rounded-xl font-bold text-white mt-4">ذخیره</button>
             </div>
           </div>
@@ -518,15 +535,15 @@ const App = () => {
       )}
 
       {/* Header */}
-      <header className="bg-slate-900/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-40">
+      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-white/10 sticky top-0 z-40 transition-colors duration-300">
         <div className="container mx-auto px-6 h-20 flex justify-between items-center">
           <div className="flex items-center gap-4">
               <div className="p-2 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-lg shadow-lg">
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                  <h1 className="text-xl font-bold text-white">سیستم مدیریت سلامت شغلی</h1>
-                  <span className="text-xs text-cyan-300">
+                  <h1 className="text-xl font-bold text-slate-900 dark:text-white">سیستم مدیریت سلامت شغلی</h1>
+                  <span className="text-xs text-cyan-600 dark:text-cyan-300">
                     {user.role === 'doctor' ? 'پنل پزشک متخصص طب کار' : 
                      user.role === 'health_officer' ? 'پنل کارشناس بهداشت حرفه‌ای' :
                      user.role === 'manager' ? 'پنل مدیریت' : 'پنل توسعه‌دهنده'}
@@ -534,9 +551,10 @@ const App = () => {
               </div>
           </div>
           <div className="flex items-center gap-4">
+              <ThemeToggle isDark={isDark} toggle={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')} />
               <button 
                 onClick={() => setShowDataManagement(true)}
-                className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-white/5 hover:border-white/20 transition-all px-3 py-2 rounded-lg text-sm"
+                className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-white/5 transition-all px-3 py-2 rounded-lg text-sm"
               >
                   <Database className="w-4 h-4" />
                   <span className="hidden md:inline">داده‌ها و همگام‌سازی</span>
@@ -547,8 +565,8 @@ const App = () => {
                   )}
               </button>
               
-              <div className="hidden md:block text-sm text-slate-400 border-l border-white/10 pl-4 ml-2">کاربر: <span className="text-white font-bold">{user.name}</span></div>
-              <button onClick={() => setAppState('login')} className="flex items-center gap-2 text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors px-4 py-2 rounded-lg text-sm"><LogOut className="w-4 h-4" />خروج</button>
+              <div className="hidden md:block text-sm text-slate-500 dark:text-slate-400 border-l border-slate-300 dark:border-white/10 pl-4 ml-2">کاربر: <span className="text-slate-900 dark:text-white font-bold">{user.name}</span></div>
+              <button onClick={() => setAppState('login')} className="flex items-center gap-2 text-red-500 dark:text-red-400 border border-red-500/20 hover:bg-red-500/10 transition-colors px-4 py-2 rounded-lg text-sm"><LogOut className="w-4 h-4" />خروج</button>
           </div>
         </div>
       </header>
@@ -584,7 +602,7 @@ const App = () => {
                   <div className="mb-6 flex justify-end">
                       <button 
                         onClick={() => setShowAssessmentForm(true)}
-                        className="bg-amber-600 hover:bg-amber-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-amber-900/20 flex items-center gap-2"
+                        className="bg-amber-500 hover:bg-amber-600 dark:bg-amber-600 dark:hover:bg-amber-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-amber-900/20 flex items-center gap-2"
                       >
                           <ClipboardList className="w-5 h-5" />
                           تکمیل فرم ارزیابی بهداشت و ایمنی
@@ -612,7 +630,8 @@ const App = () => {
                 worker={selectedWorker} 
                 onBack={() => setSelectedWorker(null)} 
                 onEdit={handleEditClick}
-                onUpdateStatus={handleUpdateReferralStatus} 
+                onUpdateStatus={handleUpdateReferralStatus}
+                isDark={isDark}
               />
           </div>
         ) : !showAssessmentForm && activeTab !== 'user_management' && (
@@ -622,6 +641,7 @@ const App = () => {
                 <Dashboard 
                     workers={workers} 
                     onViewCritical={() => setActiveTab('critical_list')}
+                    isDark={isDark}
                 />
             )}
             
@@ -644,10 +664,10 @@ const App = () => {
 
             {/* Search */}
             {activeTab === 'search' && (
-               <div className="max-w-2xl mx-auto mt-12 text-center bg-slate-800/50 p-10 rounded-2xl border border-white/10">
-                  <Search className="w-12 h-12 text-cyan-400 mx-auto mb-6" />
-                  <h2 className="text-2xl font-bold text-white mb-6">جستجوی پرونده پزشکی</h2>
-                  <form onSubmit={handleSearch} className="flex gap-3"><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="کد ملی..." className="flex-1 bg-slate-900 border border-white/20 rounded-xl px-6 py-4 text-white text-center" /><button type="submit" className="bg-cyan-500 px-8 py-4 rounded-xl font-bold text-white">جستجو</button></form>
+               <div className="max-w-2xl mx-auto mt-12 text-center bg-white dark:bg-slate-800/50 p-10 rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl dark:shadow-none">
+                  <Search className="w-12 h-12 text-cyan-500 dark:text-cyan-400 mx-auto mb-6" />
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">جستجوی پرونده پزشکی</h2>
+                  <form onSubmit={handleSearch} className="flex gap-3"><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="کد ملی..." className="flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-white/20 rounded-xl px-6 py-4 text-slate-900 dark:text-white text-center" /><button type="submit" className="bg-cyan-500 hover:bg-cyan-600 px-8 py-4 rounded-xl font-bold text-white">جستجو</button></form>
                </div>
             )}
 
@@ -655,31 +675,31 @@ const App = () => {
             {activeTab === 'newWorker' && user.role === 'health_officer' && (
                 <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8">
                     {/* Manual Entry */}
-                    <div className="bg-slate-800/50 p-8 rounded-2xl border border-white/10">
-                        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><UserPlus className="w-5 h-5 text-cyan-400"/> ثبت دستی پرسنل</h2>
+                    <div className="bg-white dark:bg-slate-800/50 p-8 rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl dark:shadow-none">
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2"><UserPlus className="w-5 h-5 text-cyan-500 dark:text-cyan-400"/> ثبت دستی پرسنل</h2>
                         <div className="space-y-4">
-                            <input type="text" className="w-full bg-slate-900 p-3 rounded-lg text-white" placeholder="نام کامل" value={newWorkerData.name} onChange={e => setNewWorkerData({...newWorkerData, name: e.target.value})}/>
-                            <input type="text" className="w-full bg-slate-900 p-3 rounded-lg text-white" placeholder="کد ملی" value={newWorkerData.nationalId} onChange={e => setNewWorkerData({...newWorkerData, nationalId: e.target.value})}/>
+                            <input type="text" className="w-full bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-slate-900 dark:text-white border border-transparent focus:border-cyan-500 outline-none" placeholder="نام کامل" value={newWorkerData.name} onChange={e => setNewWorkerData({...newWorkerData, name: e.target.value})}/>
+                            <input type="text" className="w-full bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-slate-900 dark:text-white border border-transparent focus:border-cyan-500 outline-none" placeholder="کد ملی" value={newWorkerData.nationalId} onChange={e => setNewWorkerData({...newWorkerData, nationalId: e.target.value})}/>
                             <div className="grid grid-cols-2 gap-4">
-                                <input type="text" className="w-full bg-slate-900 p-3 rounded-lg text-white" placeholder="واحد" value={newWorkerData.department} onChange={e => setNewWorkerData({...newWorkerData, department: e.target.value})}/>
-                                <input type="number" className="w-full bg-slate-900 p-3 rounded-lg text-white" placeholder="سابقه (سال)" value={newWorkerData.workYears} onChange={e => setNewWorkerData({...newWorkerData, workYears: e.target.value})}/>
+                                <input type="text" className="w-full bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-slate-900 dark:text-white border border-transparent focus:border-cyan-500 outline-none" placeholder="واحد" value={newWorkerData.department} onChange={e => setNewWorkerData({...newWorkerData, department: e.target.value})}/>
+                                <input type="number" className="w-full bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-slate-900 dark:text-white border border-transparent focus:border-cyan-500 outline-none" placeholder="سابقه (سال)" value={newWorkerData.workYears} onChange={e => setNewWorkerData({...newWorkerData, workYears: e.target.value})}/>
                             </div>
-                            <button onClick={handleRegisterWorker} className="w-full bg-blue-600 p-4 rounded-xl font-bold text-white mt-4">ایجاد پرونده</button>
+                            <button onClick={handleRegisterWorker} className="w-full bg-blue-600 hover:bg-blue-700 p-4 rounded-xl font-bold text-white mt-4">ایجاد پرونده</button>
                         </div>
                     </div>
 
                     {/* Excel Import */}
-                    <div className="bg-slate-800/50 p-8 rounded-2xl border border-white/10 flex flex-col items-center justify-center text-center">
-                        <div className="mb-4 bg-emerald-500/10 p-4 rounded-full"><FileSpreadsheet className="w-12 h-12 text-emerald-400" /></div>
-                        <h2 className="text-xl font-bold text-white mb-2">ورود گروهی (Excel/CSV)</h2>
-                        <p className="text-slate-400 text-sm mb-6">فایل باید شامل ستون‌های: Name, NationalID, Department, WorkYears باشد.</p>
+                    <div className="bg-white dark:bg-slate-800/50 p-8 rounded-2xl border border-slate-200 dark:border-white/10 flex flex-col items-center justify-center text-center shadow-xl dark:shadow-none">
+                        <div className="mb-4 bg-emerald-100 dark:bg-emerald-500/10 p-4 rounded-full"><FileSpreadsheet className="w-12 h-12 text-emerald-600 dark:text-emerald-400" /></div>
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">ورود گروهی (Excel/CSV)</h2>
+                        <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">فایل باید شامل ستون‌های: Name, NationalID, Department, WorkYears باشد.</p>
                         
                         <label className="cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-emerald-900/20 flex items-center gap-2 transition-all">
                             <UploadCloud className="w-5 h-5" />
                             انتخاب فایل CSV
                             <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
                         </label>
-                        <div className="mt-4 text-xs text-slate-500">
+                        <div className="mt-4 text-xs text-slate-500 dark:text-slate-500">
                              فرمت نمونه: علی رضایی, 1234567890, تولید, 5
                         </div>
                     </div>
@@ -688,25 +708,25 @@ const App = () => {
 
             {/* New Exam Form: Doctor Only */}
             {activeTab === 'newExam' && user.role === 'doctor' && (
-              <div className="max-w-5xl mx-auto bg-slate-800/50 p-8 rounded-2xl border border-white/10">
-                  <div className="flex justify-between border-b border-white/10 pb-6 mb-6">
-                      <div className="flex items-center gap-4"><ClipboardList className="w-8 h-8 text-emerald-400" /><h2 className="text-2xl font-bold text-white">فرم معاینات شغلی</h2></div>
-                      <div className="flex gap-2">{[1, 2, 3, 4].map(s => <div key={s} className={`w-3 h-3 rounded-full ${formStep >= s ? 'bg-cyan-500' : 'bg-slate-700'}`}></div>)}</div>
+              <div className="max-w-5xl mx-auto bg-white dark:bg-slate-800/50 p-8 rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl dark:shadow-none">
+                  <div className="flex justify-between border-b border-slate-200 dark:border-white/10 pb-6 mb-6">
+                      <div className="flex items-center gap-4"><ClipboardList className="w-8 h-8 text-emerald-500 dark:text-emerald-400" /><h2 className="text-2xl font-bold text-slate-900 dark:text-white">فرم معاینات شغلی</h2></div>
+                      <div className="flex gap-2">{[1, 2, 3, 4].map(s => <div key={s} className={`w-3 h-3 rounded-full ${formStep >= s ? 'bg-cyan-500' : 'bg-slate-300 dark:bg-slate-700'}`}></div>)}</div>
                   </div>
 
                   {formStep === 1 && (
                       <div className="space-y-6">
-                          <input type="text" className="w-full bg-slate-900 p-3 rounded-lg text-white" value={newExamData.nationalId} onChange={e => setNewExamData({...newExamData, nationalId: e.target.value})} placeholder="کد ملی پرسنل" />
+                          <input type="text" className="w-full bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-slate-900 dark:text-white border border-transparent focus:border-cyan-500 outline-none" value={newExamData.nationalId} onChange={e => setNewExamData({...newExamData, nationalId: e.target.value})} placeholder="کد ملی پرسنل" />
                           <div className="flex justify-between items-center mb-4">
-                              <h3 className="font-bold text-white">سوابق پزشکی</h3>
-                              <button onClick={clearMedicalHistory} className="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-300 transition-colors flex items-center gap-1">
+                              <h3 className="font-bold text-slate-900 dark:text-white">سوابق پزشکی</h3>
+                              <button onClick={clearMedicalHistory} className="text-xs bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 transition-colors flex items-center gap-1">
                                   <Square className="w-3 h-3" /> هیچکدام (بدون سابقه)
                               </button>
                           </div>
-                          <div className="border border-white/10 rounded-xl overflow-hidden">
-                              <table className="w-full text-sm"><thead className="bg-slate-900"><tr><th className="p-3 text-right text-slate-300">سوال</th><th className="p-3 w-20 text-center text-slate-300">بلی/خیر</th><th className="p-3 text-right text-slate-300">توضیحات</th></tr></thead>
-                              <tbody className="divide-y divide-white/5">{newExamData.medicalHistory.map((item, idx) => (
-                                  <tr key={idx}><td className="p-3 text-slate-200">{item.question}</td><td className="p-3 text-center"><input type="checkbox" checked={item.hasCondition} onChange={(e) => updateHistory(idx, 'hasCondition', e.target.checked)} className="w-4 h-4"/></td><td className="p-3"><input disabled={!item.hasCondition} type="text" value={item.description} onChange={(e) => updateHistory(idx, 'description', e.target.value)} className="w-full bg-transparent border-b border-white/10 text-white" placeholder="-" /></td></tr>
+                          <div className="border border-slate-200 dark:border-white/10 rounded-xl overflow-hidden">
+                              <table className="w-full text-sm"><thead className="bg-slate-100 dark:bg-slate-900"><tr><th className="p-3 text-right text-slate-600 dark:text-slate-300">سوال</th><th className="p-3 w-20 text-center text-slate-600 dark:text-slate-300">بلی/خیر</th><th className="p-3 text-right text-slate-600 dark:text-slate-300">توضیحات</th></tr></thead>
+                              <tbody className="divide-y divide-slate-200 dark:divide-white/5">{newExamData.medicalHistory.map((item, idx) => (
+                                  <tr key={idx}><td className="p-3 text-slate-800 dark:text-slate-200">{item.question}</td><td className="p-3 text-center"><input type="checkbox" checked={item.hasCondition} onChange={(e) => updateHistory(idx, 'hasCondition', e.target.checked)} className="w-4 h-4"/></td><td className="p-3"><input disabled={!item.hasCondition} type="text" value={item.description} onChange={(e) => updateHistory(idx, 'description', e.target.value)} className="w-full bg-transparent border-b border-slate-300 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none" placeholder="-" /></td></tr>
                               ))}</tbody></table>
                           </div>
                       </div>
@@ -714,20 +734,20 @@ const App = () => {
 
                   {formStep === 2 && (
                       <div className="space-y-4">
-                          <h3 className="font-bold text-white flex gap-2"><Stethoscope className="text-purple-400"/>بررسی سیستم‌های بدن</h3>
+                          <h3 className="font-bold text-slate-900 dark:text-white flex gap-2"><Stethoscope className="text-purple-500 dark:text-purple-400"/>بررسی سیستم‌های بدن</h3>
                           <div className="grid gap-4">{Object.entries(ORGAN_SYSTEMS_CONFIG).map(([key, config]) => {
                               const sys = newExamData.organSystems[key];
                               return (
-                                  <div key={key} className="bg-slate-900/50 p-4 rounded-xl border border-white/5">
+                                  <div key={key} className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-white/5">
                                       <div className="flex justify-between items-start mb-2">
-                                          <h4 className="font-bold text-cyan-100">{config.label}</h4>
-                                          <button onClick={() => clearOrganSystem(key)} className="text-[10px] bg-slate-800 hover:bg-emerald-600 hover:text-white px-2 py-1 rounded transition-colors">
+                                          <h4 className="font-bold text-cyan-700 dark:text-cyan-100">{config.label}</h4>
+                                          <button onClick={() => clearOrganSystem(key)} className="text-[10px] bg-slate-200 dark:bg-slate-800 hover:bg-emerald-600 hover:text-white px-2 py-1 rounded transition-colors text-slate-600 dark:text-slate-300">
                                               نرمال
                                           </button>
                                       </div>
                                       <div className="grid md:grid-cols-2 gap-4">
-                                          <div><span className="text-xs text-amber-400 block mb-1">نشانه ها</span><div className="flex flex-wrap gap-2">{config.symptoms.map(s => <label key={s} className="text-xs text-slate-300 flex items-center gap-1"><input type="checkbox" checked={sys?.symptoms.includes(s)} onChange={() => toggleOrganItem(key, 'symptoms', s)}/>{s}</label>)}</div></div>
-                                          <div><span className="text-xs text-red-400 block mb-1">علائم</span><div className="flex flex-wrap gap-2">{config.signs.map(s => <label key={s} className="text-xs text-slate-300 flex items-center gap-1"><input type="checkbox" checked={sys?.signs.includes(s)} onChange={() => toggleOrganItem(key, 'signs', s)}/>{s}</label>)}</div></div>
+                                          <div><span className="text-xs text-amber-600 dark:text-amber-400 block mb-1">نشانه ها</span><div className="flex flex-wrap gap-2">{config.symptoms.map(s => <label key={s} className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1"><input type="checkbox" checked={sys?.symptoms.includes(s)} onChange={() => toggleOrganItem(key, 'symptoms', s)}/>{s}</label>)}</div></div>
+                                          <div><span className="text-xs text-red-600 dark:text-red-400 block mb-1">علائم</span><div className="flex flex-wrap gap-2">{config.signs.map(s => <label key={s} className="text-xs text-slate-600 dark:text-slate-300 flex items-center gap-1"><input type="checkbox" checked={sys?.signs.includes(s)} onChange={() => toggleOrganItem(key, 'signs', s)}/>{s}</label>)}</div></div>
                                       </div>
                                   </div>
                               );
@@ -737,30 +757,30 @@ const App = () => {
 
                   {formStep === 3 && (
                       <div className="space-y-6">
-                          <h3 className="font-bold text-white flex gap-2"><Microscope className="text-blue-400"/>پاراکلینیک</h3>
+                          <h3 className="font-bold text-slate-900 dark:text-white flex gap-2"><Microscope className="text-blue-500 dark:text-blue-400"/>پاراکلینیک</h3>
                           
                           {/* Audiometry Grid (Air Conduction) */}
-                          <div className="bg-slate-900/50 p-5 rounded-xl border border-white/5">
-                              <h4 className="font-bold text-white mb-4 flex gap-2"><Ear className="w-4 h-4 text-blue-400"/>شنوایی سنجی (Pure Tone Audiometry - dB HL)</h4>
+                          <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-white/5">
+                              <h4 className="font-bold text-slate-900 dark:text-white mb-4 flex gap-2"><Ear className="w-4 h-4 text-blue-500 dark:text-blue-400"/>شنوایی سنجی (Pure Tone Audiometry - dB HL)</h4>
                               <div className="overflow-x-auto">
                                 <table className="w-full text-center text-sm">
                                   <thead>
-                                    <tr className="text-slate-400">
+                                    <tr className="text-slate-500 dark:text-slate-400">
                                       <th className="p-2">فرکانس (Hz)</th>
                                       {AUDIOMETRY_FREQUENCIES.map(f => <th key={f} className="p-2">{f}</th>)}
                                     </tr>
                                   </thead>
                                   <tbody>
                                     <tr>
-                                      <td className="p-2 text-blue-300 font-bold">گوش چپ (Left)</td>
+                                      <td className="p-2 text-blue-600 dark:text-blue-300 font-bold">گوش چپ (Left)</td>
                                       {AUDIOMETRY_FREQUENCIES.map((f, i) => (
-                                        <td key={f} className="p-1"><input type="number" className="w-12 bg-slate-800 border border-white/10 rounded p-1 text-center text-white" value={newExamData.hearing.left[i]} onChange={e => updateAudiometry('left', i, e.target.value)} /></td>
+                                        <td key={f} className="p-1"><input type="number" className="w-12 bg-white dark:bg-slate-800 border border-slate-300 dark:border-white/10 rounded p-1 text-center text-slate-900 dark:text-white" value={newExamData.hearing.left[i]} onChange={e => updateAudiometry('left', i, e.target.value)} /></td>
                                       ))}
                                     </tr>
                                     <tr>
-                                      <td className="p-2 text-red-300 font-bold">گوش راست (Right)</td>
+                                      <td className="p-2 text-red-600 dark:text-red-300 font-bold">گوش راست (Right)</td>
                                       {AUDIOMETRY_FREQUENCIES.map((f, i) => (
-                                        <td key={f} className="p-1"><input type="number" className="w-12 bg-slate-800 border border-white/10 rounded p-1 text-center text-white" value={newExamData.hearing.right[i]} onChange={e => updateAudiometry('right', i, e.target.value)} /></td>
+                                        <td key={f} className="p-1"><input type="number" className="w-12 bg-white dark:bg-slate-800 border border-slate-300 dark:border-white/10 rounded p-1 text-center text-slate-900 dark:text-white" value={newExamData.hearing.right[i]} onChange={e => updateAudiometry('right', i, e.target.value)} /></td>
                                       ))}
                                     </tr>
                                   </tbody>
@@ -770,37 +790,37 @@ const App = () => {
                           
                           {/* Speech Audiometry & Report */}
                           <div className="grid md:grid-cols-2 gap-6">
-                                <div className="bg-slate-900/50 p-5 rounded-xl border border-white/5">
-                                    <h4 className="font-bold text-white mb-4 text-sm">Speech Audiometry</h4>
+                                <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-white/5">
+                                    <h4 className="font-bold text-slate-900 dark:text-white mb-4 text-sm">Speech Audiometry</h4>
                                     <table className="w-full text-center text-sm">
                                         <thead>
-                                            <tr className="text-slate-400 text-xs">
+                                            <tr className="text-slate-500 dark:text-slate-400 text-xs">
                                                 <th className="p-2">Ear</th>
                                                 <th className="p-2">SRT (dB)</th>
                                                 <th className="p-2">SDS (%)</th>
                                                 <th className="p-2">UCL</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-white/5">
+                                        <tbody className="divide-y divide-slate-200 dark:divide-white/5">
                                             <tr>
-                                                <td className="p-2 font-bold text-blue-400">Left</td>
-                                                <td className="p-1"><input className="w-16 bg-slate-800 rounded p-1 text-center text-white" value={newExamData.hearing.speech?.left.srt} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, left: {...newExamData.hearing.speech.left, srt: e.target.value}}}})}/></td>
-                                                <td className="p-1"><input className="w-16 bg-slate-800 rounded p-1 text-center text-white" value={newExamData.hearing.speech?.left.sds} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, left: {...newExamData.hearing.speech.left, sds: e.target.value}}}})}/></td>
-                                                <td className="p-1"><input className="w-16 bg-slate-800 rounded p-1 text-center text-white" value={newExamData.hearing.speech?.left.ucl} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, left: {...newExamData.hearing.speech.left, ucl: e.target.value}}}})}/></td>
+                                                <td className="p-2 font-bold text-blue-600 dark:text-blue-400">Left</td>
+                                                <td className="p-1"><input className="w-16 bg-white dark:bg-slate-800 rounded p-1 text-center text-slate-900 dark:text-white border border-slate-300 dark:border-white/10" value={newExamData.hearing.speech?.left.srt} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, left: {...newExamData.hearing.speech.left, srt: e.target.value}}}})}/></td>
+                                                <td className="p-1"><input className="w-16 bg-white dark:bg-slate-800 rounded p-1 text-center text-slate-900 dark:text-white border border-slate-300 dark:border-white/10" value={newExamData.hearing.speech?.left.sds} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, left: {...newExamData.hearing.speech.left, sds: e.target.value}}}})}/></td>
+                                                <td className="p-1"><input className="w-16 bg-white dark:bg-slate-800 rounded p-1 text-center text-slate-900 dark:text-white border border-slate-300 dark:border-white/10" value={newExamData.hearing.speech?.left.ucl} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, left: {...newExamData.hearing.speech.left, ucl: e.target.value}}}})}/></td>
                                             </tr>
                                             <tr>
-                                                <td className="p-2 font-bold text-red-400">Right</td>
-                                                <td className="p-1"><input className="w-16 bg-slate-800 rounded p-1 text-center text-white" value={newExamData.hearing.speech?.right.srt} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, right: {...newExamData.hearing.speech.right, srt: e.target.value}}}})}/></td>
-                                                <td className="p-1"><input className="w-16 bg-slate-800 rounded p-1 text-center text-white" value={newExamData.hearing.speech?.right.sds} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, right: {...newExamData.hearing.speech.right, sds: e.target.value}}}})}/></td>
-                                                <td className="p-1"><input className="w-16 bg-slate-800 rounded p-1 text-center text-white" value={newExamData.hearing.speech?.right.ucl} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, right: {...newExamData.hearing.speech.right, ucl: e.target.value}}}})}/></td>
+                                                <td className="p-2 font-bold text-red-600 dark:text-red-400">Right</td>
+                                                <td className="p-1"><input className="w-16 bg-white dark:bg-slate-800 rounded p-1 text-center text-slate-900 dark:text-white border border-slate-300 dark:border-white/10" value={newExamData.hearing.speech?.right.srt} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, right: {...newExamData.hearing.speech.right, srt: e.target.value}}}})}/></td>
+                                                <td className="p-1"><input className="w-16 bg-white dark:bg-slate-800 rounded p-1 text-center text-slate-900 dark:text-white border border-slate-300 dark:border-white/10" value={newExamData.hearing.speech?.right.sds} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, right: {...newExamData.hearing.speech.right, sds: e.target.value}}}})}/></td>
+                                                <td className="p-1"><input className="w-16 bg-white dark:bg-slate-800 rounded p-1 text-center text-slate-900 dark:text-white border border-slate-300 dark:border-white/10" value={newExamData.hearing.speech?.right.ucl} onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, speech: {...newExamData.hearing.speech, right: {...newExamData.hearing.speech.right, ucl: e.target.value}}}})}/></td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
-                                <div className="bg-slate-900/50 p-5 rounded-xl border border-white/5">
-                                    <h4 className="font-bold text-white mb-4 text-sm">Audiology Report</h4>
+                                <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-white/5">
+                                    <h4 className="font-bold text-slate-900 dark:text-white mb-4 text-sm">Audiology Report</h4>
                                     <textarea 
-                                        className="w-full h-32 bg-slate-800 border border-white/10 rounded-lg p-3 text-white text-sm"
+                                        className="w-full h-32 bg-white dark:bg-slate-800 border border-slate-300 dark:border-white/10 rounded-lg p-3 text-slate-900 dark:text-white text-sm"
                                         placeholder="تفسیر نتایج شنوایی سنجی..."
                                         value={newExamData.hearing.report}
                                         onChange={e => setNewExamData({...newExamData, hearing: {...newExamData.hearing, report: e.target.value}})}
@@ -809,40 +829,40 @@ const App = () => {
                           </div>
 
                           {/* Vision */}
-                          <div className="bg-slate-900/50 p-5 rounded-xl border border-white/5">
-                              <h4 className="font-bold text-white mb-4 flex gap-2"><Eye className="w-4 h-4 text-purple-400"/>بینایی سنجی (Optometry)</h4>
+                          <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-white/5">
+                              <h4 className="font-bold text-slate-900 dark:text-white mb-4 flex gap-2"><Eye className="w-4 h-4 text-purple-500 dark:text-purple-400"/>بینایی سنجی (Optometry)</h4>
                               <div className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
-                                  <div className="flex justify-between items-center bg-white/5 p-2 rounded"><span className="text-xs text-slate-400">چشم راست (اصلاح نشده)</span><input className="w-16 bg-slate-800 text-center rounded text-white" value={newExamData.vision?.acuity.right.uncorrected} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, acuity: {...newExamData.vision!.acuity, right: {...newExamData.vision!.acuity.right, uncorrected: e.target.value}}}})} placeholder="10/10"/></div>
-                                  <div className="flex justify-between items-center bg-white/5 p-2 rounded"><span className="text-xs text-slate-400">چشم راست (با اصلاح)</span><input className="w-16 bg-slate-800 text-center rounded text-white" value={newExamData.vision?.acuity.right.corrected} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, acuity: {...newExamData.vision!.acuity, right: {...newExamData.vision!.acuity.right, corrected: e.target.value}}}})} placeholder="-"/></div>
+                                  <div className="flex justify-between items-center bg-white dark:bg-white/5 p-2 rounded border border-slate-200 dark:border-transparent"><span className="text-xs text-slate-500 dark:text-slate-400">چشم راست (اصلاح نشده)</span><input className="w-16 bg-slate-100 dark:bg-slate-800 text-center rounded text-slate-900 dark:text-white border border-slate-300 dark:border-transparent" value={newExamData.vision?.acuity.right.uncorrected} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, acuity: {...newExamData.vision!.acuity, right: {...newExamData.vision!.acuity.right, uncorrected: e.target.value}}}})} placeholder="10/10"/></div>
+                                  <div className="flex justify-between items-center bg-white dark:bg-white/5 p-2 rounded border border-slate-200 dark:border-transparent"><span className="text-xs text-slate-500 dark:text-slate-400">چشم راست (با اصلاح)</span><input className="w-16 bg-slate-100 dark:bg-slate-800 text-center rounded text-slate-900 dark:text-white border border-slate-300 dark:border-transparent" value={newExamData.vision?.acuity.right.corrected} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, acuity: {...newExamData.vision!.acuity, right: {...newExamData.vision!.acuity.right, corrected: e.target.value}}}})} placeholder="-"/></div>
                                 </div>
                                 <div className="space-y-4">
-                                  <div className="flex justify-between items-center bg-white/5 p-2 rounded"><span className="text-xs text-slate-400">چشم چپ (اصلاح نشده)</span><input className="w-16 bg-slate-800 text-center rounded text-white" value={newExamData.vision?.acuity.left.uncorrected} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, acuity: {...newExamData.vision!.acuity, left: {...newExamData.vision!.acuity.left, uncorrected: e.target.value}}}})} placeholder="10/10"/></div>
-                                  <div className="flex justify-between items-center bg-white/5 p-2 rounded"><span className="text-xs text-slate-400">چشم چپ (با اصلاح)</span><input className="w-16 bg-slate-800 text-center rounded text-white" value={newExamData.vision?.acuity.left.corrected} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, acuity: {...newExamData.vision!.acuity, left: {...newExamData.vision!.acuity.left, corrected: e.target.value}}}})} placeholder="-"/></div>
+                                  <div className="flex justify-between items-center bg-white dark:bg-white/5 p-2 rounded border border-slate-200 dark:border-transparent"><span className="text-xs text-slate-500 dark:text-slate-400">چشم چپ (اصلاح نشده)</span><input className="w-16 bg-slate-100 dark:bg-slate-800 text-center rounded text-slate-900 dark:text-white border border-slate-300 dark:border-transparent" value={newExamData.vision?.acuity.left.uncorrected} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, acuity: {...newExamData.vision!.acuity, left: {...newExamData.vision!.acuity.left, uncorrected: e.target.value}}}})} placeholder="10/10"/></div>
+                                  <div className="flex justify-between items-center bg-white dark:bg-white/5 p-2 rounded border border-slate-200 dark:border-transparent"><span className="text-xs text-slate-500 dark:text-slate-400">چشم چپ (با اصلاح)</span><input className="w-16 bg-slate-100 dark:bg-slate-800 text-center rounded text-slate-900 dark:text-white border border-slate-300 dark:border-transparent" value={newExamData.vision?.acuity.left.corrected} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, acuity: {...newExamData.vision!.acuity, left: {...newExamData.vision!.acuity.left, corrected: e.target.value}}}})} placeholder="-"/></div>
                                 </div>
                               </div>
                               <div className="grid grid-cols-3 gap-4 mt-4">
-                                <div><label className="text-xs text-slate-400 block mb-1">دید رنگ</label><select className="w-full bg-slate-800 text-white rounded p-2" value={newExamData.vision?.colorVision} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, colorVision: e.target.value as any}})}><option>Normal</option><option>Abnormal</option></select></div>
-                                <div><label className="text-xs text-slate-400 block mb-1">میدان بینایی</label><select className="w-full bg-slate-800 text-white rounded p-2" value={newExamData.vision?.visualField} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, visualField: e.target.value as any}})}><option>Normal</option><option>Abnormal</option></select></div>
-                                <div><label className="text-xs text-slate-400 block mb-1">دید عمق</label><input className="w-full bg-slate-800 text-white rounded p-2" value={newExamData.vision?.depthPerception} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, depthPerception: e.target.value}})} placeholder="ثانیه..."/></div>
+                                <div><label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">دید رنگ</label><select className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded p-2 border border-slate-300 dark:border-transparent" value={newExamData.vision?.colorVision} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, colorVision: e.target.value as any}})}><option>Normal</option><option>Abnormal</option></select></div>
+                                <div><label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">میدان بینایی</label><select className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded p-2 border border-slate-300 dark:border-transparent" value={newExamData.vision?.visualField} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, visualField: e.target.value as any}})}><option>Normal</option><option>Abnormal</option></select></div>
+                                <div><label className="text-xs text-slate-500 dark:text-slate-400 block mb-1">دید عمق</label><input className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded p-2 border border-slate-300 dark:border-transparent" value={newExamData.vision?.depthPerception} onChange={e => setNewExamData({...newExamData, vision: {...newExamData.vision!, depthPerception: e.target.value}})} placeholder="ثانیه..."/></div>
                               </div>
                           </div>
 
                           {/* Spirometry Grid */}
-                          <div className="bg-slate-900/50 p-5 rounded-xl border border-white/5">
-                              <h4 className="font-bold text-white mb-4 flex gap-2"><Wind className="w-4 h-4 text-emerald-400"/>اسپیرومتری</h4>
+                          <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-white/5">
+                              <h4 className="font-bold text-slate-900 dark:text-white mb-4 flex gap-2"><Wind className="w-4 h-4 text-emerald-500 dark:text-emerald-400"/>اسپیرومتری</h4>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                  <div><label className="text-xs text-slate-400 mb-1 block">FVC (L)</label><input type="number" className="w-full bg-slate-800 rounded p-2 text-white" value={newExamData.spirometry.fvc} onChange={e => setNewExamData({...newExamData, spirometry: {...newExamData.spirometry, fvc: Number(e.target.value)}})}/></div>
-                                  <div><label className="text-xs text-slate-400 mb-1 block">FEV1 (L)</label><input type="number" className="w-full bg-slate-800 rounded p-2 text-white" value={newExamData.spirometry.fev1} onChange={e => setNewExamData({...newExamData, spirometry: {...newExamData.spirometry, fev1: Number(e.target.value)}})}/></div>
-                                  <div><label className="text-xs text-slate-400 mb-1 block">FEV1/FVC %</label><input type="number" className="w-full bg-slate-800 rounded p-2 text-white" value={newExamData.spirometry.fev1_fvc} onChange={e => setNewExamData({...newExamData, spirometry: {...newExamData.spirometry, fev1_fvc: Number(e.target.value)}})}/></div>
-                                  <div><label className="text-xs text-slate-400 mb-1 block">PEF</label><input type="number" className="w-full bg-slate-800 rounded p-2 text-white" value={newExamData.spirometry.pef} onChange={e => setNewExamData({...newExamData, spirometry: {...newExamData.spirometry, pef: Number(e.target.value)}})}/></div>
+                                  <div><label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">FVC (L)</label><input type="number" className="w-full bg-white dark:bg-slate-800 rounded p-2 text-slate-900 dark:text-white border border-slate-300 dark:border-transparent" value={newExamData.spirometry.fvc} onChange={e => setNewExamData({...newExamData, spirometry: {...newExamData.spirometry, fvc: Number(e.target.value)}})}/></div>
+                                  <div><label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">FEV1 (L)</label><input type="number" className="w-full bg-white dark:bg-slate-800 rounded p-2 text-slate-900 dark:text-white border border-slate-300 dark:border-transparent" value={newExamData.spirometry.fev1} onChange={e => setNewExamData({...newExamData, spirometry: {...newExamData.spirometry, fev1: Number(e.target.value)}})}/></div>
+                                  <div><label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">FEV1/FVC %</label><input type="number" className="w-full bg-white dark:bg-slate-800 rounded p-2 text-slate-900 dark:text-white border border-slate-300 dark:border-transparent" value={newExamData.spirometry.fev1_fvc} onChange={e => setNewExamData({...newExamData, spirometry: {...newExamData.spirometry, fev1_fvc: Number(e.target.value)}})}/></div>
+                                  <div><label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">PEF</label><input type="number" className="w-full bg-white dark:bg-slate-800 rounded p-2 text-slate-900 dark:text-white border border-slate-300 dark:border-transparent" value={newExamData.spirometry.pef} onChange={e => setNewExamData({...newExamData, spirometry: {...newExamData.spirometry, pef: Number(e.target.value)}})}/></div>
                               </div>
                           </div>
                           
-                          <div className="bg-slate-900/50 p-5 rounded-xl border border-white/5">
-                              <h4 className="font-bold text-white mb-4">آزمایشات</h4>
+                          <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-xl border border-slate-200 dark:border-white/5">
+                              <h4 className="font-bold text-slate-900 dark:text-white mb-4">آزمایشات</h4>
                               <div className="grid grid-cols-4 gap-4">
-                                  {Object.keys(newExamData.labResults).map(k => <div key={k}><label className="text-xs text-slate-400 uppercase">{k}</label><input className="w-full bg-slate-800 text-white rounded p-1 text-center" value={(newExamData.labResults as any)[k]} onChange={e => setNewExamData({...newExamData, labResults: {...newExamData.labResults, [k]: e.target.value}})}/></div>)}
+                                  {Object.keys(newExamData.labResults).map(k => <div key={k}><label className="text-xs text-slate-500 dark:text-slate-400 uppercase">{k}</label><input className="w-full bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded p-1 text-center border border-slate-300 dark:border-transparent" value={(newExamData.labResults as any)[k]} onChange={e => setNewExamData({...newExamData, labResults: {...newExamData.labResults, [k]: e.target.value}})}/></div>)}
                               </div>
                           </div>
                       </div>
@@ -850,10 +870,10 @@ const App = () => {
 
                   {formStep === 4 && (
                       <div className="space-y-6">
-                          <h3 className="font-bold text-white flex gap-2"><CheckCircle className="text-emerald-400"/>نظریه نهایی</h3>
+                          <h3 className="font-bold text-slate-900 dark:text-white flex gap-2"><CheckCircle className="text-emerald-500 dark:text-emerald-400"/>نظریه نهایی</h3>
                           <div className="grid grid-cols-3 gap-4">
                               {['fit', 'conditional', 'unfit'].map(s => (
-                                  <button key={s} onClick={() => setNewExamData({...newExamData, finalOpinion: {...newExamData.finalOpinion, status: s as any}})} className={`p-4 rounded-xl border ${newExamData.finalOpinion.status === s ? 'bg-white/10 border-cyan-500 text-white' : 'bg-slate-900 border-white/10 text-slate-400'}`}>
+                                  <button key={s} onClick={() => setNewExamData({...newExamData, finalOpinion: {...newExamData.finalOpinion, status: s as any}})} className={`p-4 rounded-xl border transition-colors ${newExamData.finalOpinion.status === s ? 'bg-cyan-50 dark:bg-white/10 border-cyan-500 text-cyan-700 dark:text-white' : 'bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'}`}>
                                       {s === 'fit' ? 'بلامانع' : s === 'conditional' ? 'مشروط' : 'عدم صلاحیت'}
                                   </button>
                               ))}
@@ -861,7 +881,7 @@ const App = () => {
                           
                           <div>
                             <div className="flex justify-between items-center mb-2">
-                                <label className="text-sm text-slate-300">توصیه‌ها / محدودیت‌ها</label>
+                                <label className="text-sm text-slate-600 dark:text-slate-300">توصیه‌ها / محدودیت‌ها</label>
                                 <button 
                                     onClick={handleGenerateRecommendation}
                                     disabled={isGeneratingRecommendation}
@@ -871,19 +891,19 @@ const App = () => {
                                     تولید توصیه با AI
                                 </button>
                             </div>
-                            <textarea className="w-full bg-slate-900 border border-white/10 rounded-lg p-3 text-white h-24" placeholder="توصیه‌ها..." value={newExamData.finalOpinion.recommendations} onChange={e => setNewExamData({...newExamData, finalOpinion: {...newExamData.finalOpinion, recommendations: e.target.value}})}></textarea>
+                            <textarea className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-white/10 rounded-lg p-3 text-slate-900 dark:text-white h-24" placeholder="توصیه‌ها..." value={newExamData.finalOpinion.recommendations} onChange={e => setNewExamData({...newExamData, finalOpinion: {...newExamData.finalOpinion, recommendations: e.target.value}})}></textarea>
                           </div>
                           
-                          <div className="text-sm text-slate-400 bg-slate-800/50 p-3 rounded">
+                          <div className="text-sm text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 p-3 rounded">
                               <Info className="w-4 h-4 inline-block ml-1" />
                               در صورتی که وضعیت را مشروط یا عدم صلاحیت انتخاب کنید، پرونده به صورت خودکار در لیست پیگیری ارجاع تخصصی قرار خواهد گرفت.
                           </div>
                       </div>
                   )}
 
-                  <div className="flex justify-between mt-8 pt-6 border-t border-white/10">
-                      {formStep > 1 ? <button onClick={() => setFormStep(prev => Math.max(1, prev - 1) as any)} className="px-6 py-3 bg-slate-700 text-white rounded-xl">مرحله قبل</button> : <div></div>}
-                      {formStep < 4 ? <button onClick={() => setFormStep(prev => Math.min(4, prev + 1) as any)} className="px-8 py-3 bg-cyan-600 text-white rounded-xl font-bold">مرحله بعد</button> : <button onClick={handleInitiateSaveExam} className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20">ثبت نهایی</button>}
+                  <div className="flex justify-between mt-8 pt-6 border-t border-slate-200 dark:border-white/10">
+                      {formStep > 1 ? <button onClick={() => setFormStep(prev => Math.max(1, prev - 1) as any)} className="px-6 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-white rounded-xl">مرحله قبل</button> : <div></div>}
+                      {formStep < 4 ? <button onClick={() => setFormStep(prev => Math.min(4, prev + 1) as any)} className="px-8 py-3 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold">مرحله بعد</button> : <button onClick={handleInitiateSaveExam} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-lg shadow-emerald-900/20">ثبت نهایی</button>}
                   </div>
               </div>
             )}

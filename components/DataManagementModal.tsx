@@ -59,22 +59,22 @@ const DataManagementModal: React.FC<Props> = ({ workers, onUpdateWorkers, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
             {/* Header */}
-            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-slate-800/50">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    <Database className="text-cyan-400" />
+            <div className="p-4 border-b border-slate-200 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Database className="text-cyan-500 dark:text-cyan-400" />
                     مدیریت داده‌ها و همگام‌سازی
                 </h3>
-                <button onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
+                <button onClick={onClose} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
                     <X className="w-5 h-5" />
                 </button>
             </div>
 
             <div className="p-6 space-y-8">
                 {msg && (
-                    <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${msg.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                    <div className={`p-3 rounded-lg text-sm flex items-center gap-2 ${msg.type === 'success' ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20' : 'bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20'}`}>
                         {msg.type === 'success' ? <CheckCircle className="w-4 h-4"/> : <AlertTriangle className="w-4 h-4"/>}
                         {msg.text}
                     </div>
@@ -82,21 +82,21 @@ const DataManagementModal: React.FC<Props> = ({ workers, onUpdateWorkers, onClos
 
                 {/* Server Sync Section */}
                 <div>
-                    <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
-                        <Server className="w-4 h-4 text-purple-400" />
+                    <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                        <Server className="w-4 h-4 text-purple-500 dark:text-purple-400" />
                         وضعیت سرور مرکزی
                     </h4>
-                    <div className="bg-slate-800 rounded-xl p-4 border border-white/5 flex justify-between items-center">
+                    <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-white/5 flex justify-between items-center">
                         <div>
-                            <div className="text-xs text-slate-400 mb-1">آخرین همگام‌سازی</div>
-                            <div className="font-mono text-white text-sm">
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">آخرین همگام‌سازی</div>
+                            <div className="font-mono text-slate-900 dark:text-white text-sm">
                                 {lastSync ? toJalali(lastSync) + ' ' + new Date(lastSync).toLocaleTimeString('fa-IR') : 'هرگز'}
                             </div>
                         </div>
                         <button 
                             onClick={handleSync}
                             disabled={isSyncing}
-                            className="bg-purple-600 hover:bg-purple-500 disabled:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
+                            className="bg-purple-600 hover:bg-purple-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all"
                         >
                             <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
                             {isSyncing ? 'در حال سینک...' : 'همگام‌سازی'}
@@ -107,24 +107,24 @@ const DataManagementModal: React.FC<Props> = ({ workers, onUpdateWorkers, onClos
                     </p>
                 </div>
 
-                <div className="h-px bg-white/10"></div>
+                <div className="h-px bg-slate-200 dark:bg-white/10"></div>
 
                 {/* Local Backup Section */}
                 <div>
-                    <h4 className="text-sm font-bold text-slate-300 mb-3 flex items-center gap-2">
-                        <FileJson className="w-4 h-4 text-emerald-400" />
+                    <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
+                        <FileJson className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                         پشتیبان‌گیری محلی (فایل)
                     </h4>
                     <div className="grid grid-cols-2 gap-4">
                         <button 
                             onClick={handleBackup}
-                            className="bg-slate-800 hover:bg-slate-700 border border-white/10 text-white p-4 rounded-xl flex flex-col items-center gap-2 transition-all"
+                            className="bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white p-4 rounded-xl flex flex-col items-center gap-2 transition-all"
                         >
-                            <Download className="w-6 h-6 text-emerald-400" />
+                            <Download className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
                             <span className="text-sm">دانلود بکاپ</span>
                         </button>
-                        <label className="bg-slate-800 hover:bg-slate-700 border border-white/10 text-white p-4 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer">
-                            <Upload className="w-6 h-6 text-blue-400" />
+                        <label className="bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-white p-4 rounded-xl flex flex-col items-center gap-2 transition-all cursor-pointer">
+                            <Upload className="w-6 h-6 text-blue-500 dark:text-blue-400" />
                             <span className="text-sm">بازیابی بکاپ</span>
                             <input 
                                 type="file" 

@@ -6,18 +6,39 @@ const USERS_KEY = 'ohs_users_v1';
 const LICENSE_KEY = 'ohs_license_v1';
 const TRIAL_DURATION_DAYS = 7;
 
-// Seed Default Developer User if none exist
+// Seed Default Users
 const seedUsers = () => {
+    // Check if users exist. If not, seed them.
+    // NOTE: In a real scenario, we might check if the list is empty. 
+    // Here we ensure at least the default admin exists if the key is missing.
     if (!localStorage.getItem(USERS_KEY)) {
-        const devUser: User = {
-            id: 'dev-001',
-            username: 'admin',
-            password: '123', // In a real app, hash this!
-            role: 'developer',
-            name: 'مدیر سیستم',
-            createdAt: new Date().toISOString()
-        };
-        localStorage.setItem(USERS_KEY, JSON.stringify([devUser]));
+        const defaultUsers: User[] = [
+            {
+                id: 'dev-001',
+                username: 'admin',
+                password: '123', // In a real app, hash this!
+                role: 'developer',
+                name: 'مدیر سیستم',
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: 'doc-001',
+                username: 'doctor',
+                password: '123',
+                role: 'doctor',
+                name: 'دکتر محمدی (پزشک طب کار)',
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: 'hse-001',
+                username: 'hse',
+                password: '123',
+                role: 'health_officer',
+                name: 'مهندس رضایی (کارشناس بهداشت)',
+                createdAt: new Date().toISOString()
+            }
+        ];
+        localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
     }
 };
 
@@ -47,13 +68,13 @@ export const AuthService = {
 
     login: (username: string, password: string): User | null => {
         const users = AuthService.getUsers();
-        const user = users.find(u => u.username === username && u.password === password);
+        const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
         return user || null;
     },
 
     createUser: (user: Omit<User, 'id' | 'createdAt'>): boolean => {
         const users = AuthService.getUsers();
-        if (users.some(u => u.username === user.username)) return false; // Duplicate
+        if (users.some(u => u.username.toLowerCase() === user.username.toLowerCase())) return false; // Duplicate
         
         const newUser: User = {
             ...user,
@@ -70,6 +91,16 @@ export const AuthService = {
         let users = AuthService.getUsers();
         if (users.find(u => u.id === id)?.role === 'developer') return false; // Cannot delete initial dev
         users = users.filter(u => u.id !== id);
+        localStorage.setItem(USERS_KEY, JSON.stringify(users));
+        return true;
+    },
+
+    resetPassword: (id: string, newPass: string): boolean => {
+        const users = AuthService.getUsers();
+        const userIndex = users.findIndex(u => u.id === id);
+        if (userIndex === -1) return false;
+
+        users[userIndex].password = newPass;
         localStorage.setItem(USERS_KEY, JSON.stringify(users));
         return true;
     },

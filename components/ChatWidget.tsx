@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User, Loader2 } from 'lucide-react';
 import { ChatSession } from '@google/genai';
@@ -53,7 +54,7 @@ const ChatWidget: React.FC = () => {
   }
 
   return (
-    <div className="fixed bottom-6 left-6 w-96 h-[500px] bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden ring-1 ring-white/10">
+    <div className="fixed bottom-6 left-6 w-96 h-[500px] bg-white dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden ring-1 ring-black/5 dark:ring-white/10">
       {/* Header */}
       <div className="bg-gradient-to-r from-cyan-600 to-blue-600 p-4 flex justify-between items-center">
         <div className="flex items-center gap-2">
@@ -72,9 +73,9 @@ const ChatWidget: React.FC = () => {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-transparent">
         {messages.length === 0 && (
-          <div className="text-center mt-20 text-white/40">
+          <div className="text-center mt-20 text-slate-400 dark:text-white/40">
             <Bot className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p className="text-sm">سلام! چطور می‌توانم در تحلیل داده‌های سلامت به شما کمک کنم؟</p>
           </div>
@@ -90,8 +91,8 @@ const ChatWidget: React.FC = () => {
             <div
               className={`max-w-[80%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-cyan-500/20 text-cyan-50 rounded-tl-none border border-cyan-500/30'
-                  : 'bg-white/10 text-slate-100 rounded-tr-none border border-white/10'
+                  ? 'bg-cyan-100 dark:bg-cyan-500/20 text-cyan-900 dark:text-cyan-50 rounded-tl-none border border-cyan-200 dark:border-cyan-500/30'
+                  : 'bg-white dark:bg-white/10 text-slate-800 dark:text-slate-100 rounded-tr-none border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none'
               }`}
             >
               {msg.content}
@@ -99,7 +100,7 @@ const ChatWidget: React.FC = () => {
           </div>
         ))}
         {isLoading && (
-          <div className="flex items-center gap-2 text-white/50 text-xs">
+          <div className="flex items-center gap-2 text-slate-500 dark:text-white/50 text-xs">
             <Loader2 className="w-3 h-3 animate-spin" />
             در حال تفکر...
           </div>
@@ -108,7 +109,7 @@ const ChatWidget: React.FC = () => {
       </div>
 
       {/* Input */}
-      <div className="p-4 bg-slate-950/50 border-t border-white/5">
+      <div className="p-4 bg-white dark:bg-slate-950/50 border-t border-slate-200 dark:border-white/5">
         <div className="flex gap-2 relative">
           <input
             type="text"
@@ -116,13 +117,13 @@ const ChatWidget: React.FC = () => {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder="پیام خود را بنویسید..."
-            className="flex-1 bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-sm"
+            className="flex-1 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 text-sm"
             disabled={isLoading}
           />
           <button
             onClick={handleSend}
             disabled={isLoading || !input.trim()}
-            className="absolute left-2 top-2 bottom-2 bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-700 text-white p-2 rounded-lg transition-colors"
+            className="absolute left-2 top-2 bottom-2 bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white p-2 rounded-lg transition-colors"
           >
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>
