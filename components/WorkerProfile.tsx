@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ScatterChart, Scatter, Legend } from 'recharts';
-import { AlertTriangle, Ear, Wind, Heart, FileText, ArrowLeft, Activity, Edit, Eye, TrendingUp, FileDown, Loader2 } from 'lucide-react';
-import { Worker, Alert } from '../types';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Bar } from 'recharts';
+import { AlertTriangle, Ear, Wind, Heart, FileText, ArrowLeft, Activity, Edit, Eye, TrendingUp, FileDown, Loader2, Info, CheckCircle, Shield } from 'lucide-react';
+import { Worker, Alert, OrganSystemFinding, ReferralStatus } from '../types';
 import { toJalali } from '../utils';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -10,10 +10,26 @@ interface WorkerProfileProps {
   worker: Worker;
   onBack: () => void;
   onEdit: () => void;
+  onUpdateStatus?: (id: number, status: ReferralStatus, note?: string) => void;
 }
 
-const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit }) => {
+const SYSTEM_LABELS: Record<string, string> = {
+  general: 'عمومی',
+  eyes: 'چشم',
+  skin: 'پوست و مو',
+  ent: 'گوش، حلق و بینی',
+  lungs: 'ریه',
+  cardio: 'قلب و عروق',
+  digestive: 'شکم و لگن',
+  musculoskeletal: 'اسکلتی و عضلانی',
+  neuro: 'سیستم عصبی',
+  psych: 'اعصاب و روان'
+};
+
+const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, onUpdateStatus }) => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showSpecialistModal, setShowSpecialistModal] = useState(false);
+  const [specialistNote, setSpecialistNote] = useState('');
   const printRef = useRef<HTMLDivElement>(null);
   
   const analyzeSpirometry = (fvc: number, fev1: number) => {
@@ -22,6 +38,7 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit })
     let color = 'text-emerald-400';
     let badgeBg = 'bg-emerald-500/20';
     let explanation = 'عملکرد ریوی در محدوده طبیعی قرار دارد.';
+    let details = 'نتایج اسپیرومتری نشان‌دهنده عملکرد طبیعی ریه است. نسبت FEV1/FVC و ظرفیت حیاتی (FVC) در محدوده نرمال قرار دارند.';
 
     const isObstructive = ratio < 70;
     const isRestrictive = fvc < 3.5; // Demo threshold
@@ -31,19 +48,22 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit })
       color = 'text-red-400';
       badgeBg = 'bg-red-500/20';
       explanation = `الگوی ترکیبی (Mixed)`;
+      details = 'نتایج نشان‌دهنده الگوی ترکیبی (انسدادی و محدودکننده) است. کاهش همزمان نسبت FEV1/FVC و ظرفیت حیاتی (FVC) مشاهده می‌شود که می‌تواند ناشی از وجود همزمان بیماری‌های انسدادی و محدودکننده باشد.';
     } else if (isObstructive) {
       result = 'Obstructive';
       color = 'text-orange-400';
       badgeBg = 'bg-orange-500/20';
       explanation = `الگوی انسدادی (Obstructive)`;
+      details = 'نتایج نشان‌دهنده الگوی انسدادی است (FEV1/FVC < 70%). این الگو معمولاً با بیماری‌هایی مانند آسم، برونشیت مزمن یا آمفیزم مرتبط است که در آن راه‌های هوایی باریک شده و بازدم دشوار می‌شود.';
     } else if (isRestrictive) {
       result = 'Restrictive';
       color = 'text-amber-400';
       badgeBg = 'bg-amber-500/20';
       explanation = `الگوی محدودکننده (Restrictive)`;
+      details = 'نتایج نشان‌دهنده الگوی محدودکننده است (FVC کاهش یافته). این حالت نشان‌دهنده کاهش حجم ریه است که می‌تواند ناشی از بیماری‌های بافت ریه (مانند فیبروز) یا محدودیت‌های قفسه سینه باشد.';
     }
 
-    return { result, explanation, ratio: ratio.toFixed(0), color, badgeBg };
+    return { result, explanation, details, ratio: ratio.toFixed(0), color, badgeBg };
   };
 
   const latestExam = worker.exams[0];
@@ -54,20 +74,32 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit })
     setIsGeneratingPdf(true);
 
     try {
-        const element = printRef.current;
-        // Make sure images/fonts are loaded
-        const canvas = await html2canvas(element, {
-            scale: 2, // Higher scale for better quality
-            useCORS: true,
-            backgroundColor: '#ffffff'
-        });
+        const pages = printRef.current.querySelectorAll('.print-page');
+        if (pages.length === 0) return;
 
-        const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF('p', 'mm', 'a4');
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        const pdfHeight = pdf.internal.pageSize.getHeight();
 
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        for (let i = 0; i < pages.length; i++) {
+            const page = pages[i] as HTMLElement;
+            // Use html2canvas on each page div
+            const canvas = await html2canvas(page, { 
+                scale: 2, 
+                useCORS: true, 
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+            
+            const imgData = canvas.toDataURL('image/png');
+            
+            if (i > 0) {
+                pdf.addPage();
+            }
+            // Fit to A4
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        }
+
         pdf.save(`Health_Report_${worker.nationalId}_${new Date().toISOString().slice(0,10)}.pdf`);
     } catch (error) {
         console.error("PDF Generation failed", error);
@@ -76,8 +108,15 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit })
         setIsGeneratingPdf(false);
     }
   };
+  
+  const handleResolveReferral = () => {
+      if (onUpdateStatus) {
+          onUpdateStatus(worker.id, 'none', specialistNote);
+          setShowSpecialistModal(false);
+      }
+  };
 
-  // Prepare Audiogram Data (Latest Exam)
+  // Prepare Audiogram Data
   const audiogramData = latestExam ? [
       { hz: '250', left: latestExam.hearing.left[0], right: latestExam.hearing.right[0] },
       { hz: '500', left: latestExam.hearing.left[1], right: latestExam.hearing.right[1] },
@@ -87,16 +126,9 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit })
       { hz: '8k', left: latestExam.hearing.left[5], right: latestExam.hearing.right[5] },
   ] : [];
 
-  // Prepare History Data for Scatter Plot (Hearing Averages)
   const historyData = worker.exams.map(exam => {
-    // Calculate Pure Tone Average (PTA) or simple average
-    const avgLeft = exam.hearing.left.length > 0 
-        ? exam.hearing.left.reduce((a, b) => a + b, 0) / exam.hearing.left.length 
-        : 0;
-    const avgRight = exam.hearing.right.length > 0 
-        ? exam.hearing.right.reduce((a, b) => a + b, 0) / exam.hearing.right.length 
-        : 0;
-    
+    const avgLeft = exam.hearing.left.length > 0 ? exam.hearing.left.reduce((a, b) => a + b, 0) / exam.hearing.left.length : 0;
+    const avgRight = exam.hearing.right.length > 0 ? exam.hearing.right.reduce((a, b) => a + b, 0) / exam.hearing.right.length : 0;
     return {
       date: new Date(exam.date).getTime(),
       dateLabel: toJalali(exam.date),
@@ -105,48 +137,86 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit })
     };
   }).sort((a, b) => a.date - b.date);
 
-  // Custom Tooltip for Scatter Plot
-  const ScatterTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-slate-800 border border-white/10 p-3 rounded-lg shadow-xl text-sm">
-          <p className="text-slate-400 mb-2">{data.dateLabel}</p>
-          <div className="flex gap-4">
-             <div className="flex items-center gap-1 text-blue-400">
-                 <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                 <span>چپ: {data.left} dB</span>
-             </div>
-             <div className="flex items-center gap-1 text-red-400">
-                 <span className="w-2 h-2 rounded-full bg-red-400"></span>
-                 <span>راست: {data.right} dB</span>
-             </div>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+  // Prepare Spirometry Trend Data
+  const spiroTrendData = worker.exams.map(exam => ({
+    date: new Date(exam.date).getTime(),
+    dateLabel: toJalali(exam.date),
+    fvc: exam.spirometry.fvc,
+    fev1: exam.spirometry.fev1,
+    ratio: exam.spirometry.fev1_fvc,
+  })).sort((a, b) => a.date - b.date);
 
   return (
     <div className="space-y-6 animate-in slide-in-from-right-8 duration-500">
+      
+      {/* Specialist Result Modal */}
+      {showSpecialistModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-md w-full">
+                <h3 className="text-xl font-bold text-white mb-4">ثبت نتیجه ارجاع تخصصی</h3>
+                <textarea 
+                    className="w-full bg-slate-800 border border-white/10 rounded-lg p-3 text-white h-32 mb-4"
+                    placeholder="نتیجه معاینه متخصص و نظر نهایی..."
+                    value={specialistNote}
+                    onChange={(e) => setSpecialistNote(e.target.value)}
+                />
+                <div className="flex gap-3">
+                    <button onClick={() => setShowSpecialistModal(false)} className="flex-1 p-2 rounded-xl bg-slate-700 text-slate-300">انصراف</button>
+                    <button onClick={handleResolveReferral} className="flex-1 p-2 rounded-xl bg-emerald-600 text-white font-bold">تایید و خروج از لیست پیگیری</button>
+                </div>
+            </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center">
         <button onClick={onBack} className="flex items-center text-cyan-400 hover:text-cyan-300 transition-colors group">
             <ArrowLeft className="w-5 h-5 ml-2 group-hover:-translate-x-1 transition-transform" />
-            بازگشت به لیست
+            بازگشت
         </button>
         
-        {latestExam && (
-            <button 
-                onClick={handleGeneratePDF}
-                disabled={isGeneratingPdf}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-50"
-            >
-                {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin"/> : <FileDown className="w-4 h-4" />}
-                دانلود گزارش جامع
-            </button>
-        )}
+        <div className="flex gap-3">
+            {worker.referralStatus === 'pending_specialist_result' && onUpdateStatus && (
+                <button 
+                    onClick={() => setShowSpecialistModal(true)}
+                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-purple-900/20"
+                >
+                    <CheckCircle className="w-4 h-4" />
+                    ثبت نتیجه ارجاع تخصصی
+                </button>
+            )}
+            
+            {latestExam && (
+                <button 
+                    onClick={handleGeneratePDF}
+                    disabled={isGeneratingPdf}
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-bold transition-all shadow-lg shadow-emerald-900/20 disabled:opacity-50"
+                >
+                    {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin"/> : <FileDown className="w-4 h-4" />}
+                    دانلود گزارش جامع
+                </button>
+            )}
+        </div>
       </div>
+
+      {/* Health Officer Assessment Banner (If exists) */}
+      {worker.healthAssessment && (
+        <div className="bg-gradient-to-r from-slate-800 to-slate-800/50 rounded-2xl p-6 border border-amber-500/30 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-2 h-full bg-amber-500"></div>
+            <div className="flex items-start gap-4">
+                <div className="p-3 bg-amber-500/20 rounded-xl shrink-0"><Shield className="w-6 h-6 text-amber-400" /></div>
+                <div className="flex-1">
+                    <h3 className="text-white font-bold mb-1">ارزیابی ایمنی و بهداشت (کارشناس)</h3>
+                    <p className="text-slate-400 text-sm mb-3">تاریخ: {toJalali(worker.healthAssessment.date)} | کارشناس: {worker.healthAssessment.officerName}</p>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                        {Object.entries(worker.healthAssessment.hazards).map(([key, val]) => val && (
+                            <span key={key} className="px-2 py-1 bg-amber-500/10 text-amber-300 rounded text-xs border border-amber-500/20">{key}</span>
+                        ))}
+                    </div>
+                    {worker.healthAssessment.description && <p className="text-slate-300 text-sm bg-slate-900/50 p-3 rounded-lg">{worker.healthAssessment.description}</p>}
+                </div>
+            </div>
+        </div>
+      )}
 
       {/* Header Info */}
       <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-8 border border-white/10 relative overflow-hidden shadow-xl">
@@ -178,32 +248,33 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit })
          </div>
       ) : (
         <>
-        {/* Detail Cards */}
+        {/* Interactive UI Details (Charts, Tables) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             
-            {/* Audiogram Card (Latest) */}
+            {/* Audiogram Card */}
             <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-white/10 lg:col-span-2">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><Ear className="w-6 h-6" /></div>
-                    <h3 className="text-white font-bold">شنوایی سنجی (Audiogram - Latest)</h3>
+                    <h3 className="text-white font-bold">شنوایی سنجی (Audiometry - Latest)</h3>
                 </div>
-                <div className="h-[300px] w-full bg-white/5 rounded-xl p-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={audiogramData}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                            <XAxis dataKey="hz" stroke="#94a3b8" label={{ value: 'Frequency (Hz)', position: 'insideBottom', offset: -5, fill: '#94a3b8' }} />
-                            {/* Inverted Y Axis for Hearing Loss */}
-                            <YAxis reversed domain={[0, 120]} stroke="#94a3b8" label={{ value: 'Hearing Level (dB HL)', angle: -90, position: 'insideLeft', fill: '#94a3b8' }} />
-                            <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }} />
-                            <Legend />
-                            <Line type="monotone" dataKey="left" name="گوش چپ (Left)" stroke="#3b82f6" strokeWidth={2} dot={{r: 4, fill: '#3b82f6'}} />
-                            <Line type="monotone" dataKey="right" name="گوش راست (Right)" stroke="#f43f5e" strokeWidth={2} dot={{r: 4, fill: '#f43f5e'}} />
-                        </LineChart>
-                    </ResponsiveContainer>
+                <div className="flex flex-col gap-4">
+                    <div className="h-[250px] w-full bg-white/5 rounded-xl p-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={audiogramData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
+                                <XAxis dataKey="hz" stroke="#94a3b8" label={{ value: 'Frequency (Hz)', position: 'insideBottom', offset: -5, fill: '#94a3b8' }} />
+                                <YAxis reversed domain={[0, 120]} stroke="#94a3b8" label={{ value: 'Hearing Level (dB HL)', angle: -90, position: 'insideLeft', fill: '#94a3b8' }} />
+                                <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }} />
+                                <Legend />
+                                <Line type="monotone" dataKey="left" name="گوش چپ (Left)" stroke="#3b82f6" strokeWidth={2} dot={{r: 4, fill: '#3b82f6'}} />
+                                <Line type="monotone" dataKey="right" name="گوش راست (Right)" stroke="#f43f5e" strokeWidth={2} dot={{r: 4, fill: '#f43f5e'}} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </div>
 
-            {/* Vision & Vitals */}
+            {/* Vision & Vitals Card */}
             <div className="space-y-6">
                 <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-white/10">
                     <div className="flex items-center gap-3 mb-4">
@@ -220,57 +291,46 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit })
                                 <span className="text-slate-400">دید رنگ</span>
                                 <span className={`font-bold ${latestExam.vision.colorVision === 'Normal' ? 'text-emerald-400' : 'text-red-400'}`}>{latestExam.vision.colorVision}</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-400">میدان بینایی</span>
-                                <span className={`font-bold ${latestExam.vision.visualField === 'Normal' ? 'text-emerald-400' : 'text-red-400'}`}>{latestExam.vision.visualField}</span>
-                            </div>
                         </div>
                     ) : <span className="text-slate-500 text-sm">داده موجود نیست</span>}
                 </div>
-
-                <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-white/10">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="p-2 bg-red-500/20 rounded-lg text-red-400"><Heart className="w-6 h-6" /></div>
-                        <h3 className="text-white font-bold">علائم حیاتی</h3>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-4xl font-mono font-bold text-white mb-1">{latestExam.bp}</div>
-                        <div className="text-slate-400 text-xs">فشار خون (mmHg)</div>
-                    </div>
-                </div>
             </div>
             
-            {/* Hearing History Scatter Plot */}
+            {/* Spirometry Trend Chart */}
             <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-white/10 lg:col-span-3">
                 <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-cyan-500/20 rounded-lg text-cyan-400"><TrendingUp className="w-6 h-6" /></div>
-                    <h3 className="text-white font-bold">روند تغییرات شنوایی در طول زمان (Hearing History)</h3>
+                    <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400"><TrendingUp className="w-6 h-6" /></div>
+                    <h3 className="text-white font-bold">روند تغییرات اسپیرومتری (Spirometry Trends)</h3>
                 </div>
                 <div className="h-[300px] w-full bg-white/5 rounded-xl p-4">
                     <ResponsiveContainer width="100%" height="100%">
-                      <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                      <ComposedChart data={spiroTrendData} margin={{ top: 20, right: 30, bottom: 20, left: 10 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
                         <XAxis 
-                          type="number" 
-                          dataKey="date" 
-                          name="Date" 
-                          domain={['auto', 'auto']}
-                          tickFormatter={(unixTime) => new Date(unixTime).toLocaleDateString('fa-IR')}
+                          dataKey="dateLabel" 
                           stroke="#94a3b8"
+                          tick={{fill: '#94a3b8'}}
                         />
                         <YAxis 
-                          type="number" 
-                          dataKey="left" 
-                          name="Hearing Level" 
-                          reversed 
-                          label={{ value: 'Avg Hearing Level (dB)', angle: -90, position: 'insideLeft', fill: '#94a3b8' }} 
+                          yAxisId="left"
+                          label={{ value: 'Volume (L)', angle: -90, position: 'insideLeft', fill: '#94a3b8' }} 
                           stroke="#94a3b8"
+                          tick={{fill: '#94a3b8'}}
                         />
-                        <Tooltip content={<ScatterTooltip />} />
+                        <YAxis 
+                          yAxisId="right"
+                          orientation="right"
+                          domain={[0, 100]}
+                          label={{ value: 'Ratio (%)', angle: 90, position: 'insideRight', fill: '#94a3b8' }} 
+                          stroke="#94a3b8"
+                          tick={{fill: '#94a3b8'}}
+                        />
+                        <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }} />
                         <Legend />
-                        <Scatter name="گوش چپ (Avg Left)" data={historyData} fill="#3b82f6" shape="circle" />
-                        <Scatter name="گوش راست (Avg Right)" data={historyData} fill="#f43f5e" shape="triangle" />
-                      </ScatterChart>
+                        <Bar yAxisId="left" dataKey="fvc" name="FVC (L)" fill="#10b981" barSize={20} radius={[4, 4, 0, 0]} />
+                        <Bar yAxisId="left" dataKey="fev1" name="FEV1 (L)" fill="#3b82f6" barSize={20} radius={[4, 4, 0, 0]} />
+                        <Line yAxisId="right" type="monotone" dataKey="ratio" name="Ratio (FEV1/FVC %)" stroke="#f59e0b" strokeWidth={3} dot={{r: 4}} />
+                      </ComposedChart>
                     </ResponsiveContainer>
                 </div>
             </div>
@@ -279,7 +339,7 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit })
             <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-white/10 lg:col-span-3">
                 <div className="flex items-center gap-3 mb-4">
                     <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400"><Wind className="w-6 h-6" /></div>
-                    <h3 className="text-white font-bold">نتایج اسپیرومتری (Spirometry)</h3>
+                    <h3 className="text-white font-bold">جدول نتایج اسپیرومتری</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-center">
@@ -314,173 +374,270 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit })
                 </div>
             </div>
 
+             {/* Spirometry Interpretation Card */}
+            {latestExam && (
+              <div className="bg-slate-800/50 backdrop-blur rounded-2xl p-6 border border-white/10 lg:col-span-3">
+                 <div className="flex flex-col md:flex-row items-start gap-4">
+                    <div className={`p-3 rounded-xl ${spiroStatus.badgeBg} ${spiroStatus.color} shrink-0`}>
+                        <Activity className="w-8 h-8" />
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="text-white font-bold text-lg mb-2">تفسیر نتایج اسپیرومتری (آخرین معاینه)</h3>
+                        <div className="flex flex-wrap items-center gap-3 mb-3">
+                            <span className={`px-3 py-1 rounded-lg text-sm font-bold border ${spiroStatus.color.replace('text-', 'border-')} ${spiroStatus.badgeBg}`}>
+                                {spiroStatus.result}
+                            </span>
+                             <span className="text-slate-400 text-sm font-mono">
+                                FVC: {latestExam.spirometry.fvc} L
+                            </span>
+                        </div>
+                        <p className="text-slate-300 leading-relaxed text-sm">
+                            {spiroStatus.details}
+                        </p>
+                    </div>
+                 </div>
+              </div>
+            )}
         </div>
-
-        {/* Hidden Printable Report Template */}
+        
+        {/* --- HIDDEN MULTI-PAGE PRINT LAYOUT --- */}
         <div 
+            ref={printRef}
             style={{ 
                 position: 'fixed', 
                 top: '-10000px', 
-                left: '-10000px',
-                width: '210mm', // A4 Width
-                minHeight: '297mm',
-                backgroundColor: 'white',
-                color: 'black',
-                padding: '20mm',
-                fontFamily: 'Vazirmatn, sans-serif',
-                direction: 'rtl'
-            }} 
-            ref={printRef}
+                left: '-10000px' 
+            }}
         >
-            {/* Header */}
-            <div className="border-b-2 border-black pb-4 mb-6 flex justify-between items-center">
-                <div className="text-right">
-                    <h1 className="text-xl font-bold mb-1">مرکز تخصصی طب کار و بیماری‌های شغلی</h1>
-                    <p className="text-sm text-gray-600">گزارش پرونده سلامت شغلی</p>
-                </div>
-                <div className="text-left">
-                    <div className="text-sm font-mono">تاریخ گزارش: {toJalali(new Date().toISOString())}</div>
-                    <div className="text-sm font-mono mt-1">شماره پرونده: {worker.id}</div>
-                </div>
+            {/* PAGE 1: HEALTH OFFICER ASSESSMENT */}
+            <div className="print-page relative" style={{ width: '210mm', height: '297mm', backgroundColor: 'white', color: 'black', padding: '15mm', direction: 'rtl', fontFamily: 'Vazirmatn' }}>
+                 {/* Header */}
+                 <div className="border-b-2 border-black pb-4 mb-6 flex justify-between items-center">
+                    <div className="flex items-center gap-2"><Shield size={40}/> <span className="font-bold text-lg">Health System</span></div>
+                    <div className="text-center">
+                        <h1 className="text-xl font-black">فرم ارزیابی عوامل زیان‌آور و بهداشت حرفه‌ای</h1>
+                        <h2 className="text-sm">Occupational Health & Hygiene Assessment</h2>
+                    </div>
+                    <div className="text-xs font-mono">{toJalali(new Date().toISOString())}</div>
+                 </div>
+
+                 {/* Patient Info */}
+                 <div className="bg-slate-100 p-4 rounded-xl border border-slate-300 mb-6">
+                    <h3 className="font-bold border-b border-slate-300 pb-2 mb-3">مشخصات پرسنل</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>نام و نام خانوادگی: <span className="font-bold">{worker.name}</span></div>
+                        <div>کد ملی: <span className="font-bold font-mono">{worker.nationalId}</span></div>
+                        <div>واحد: <span className="font-bold">{worker.department}</span></div>
+                        <div>سابقه: <span className="font-bold">{worker.workYears} سال</span></div>
+                    </div>
+                 </div>
+
+                 {/* Hazards */}
+                 <div className="mb-6">
+                     <h3 className="font-bold mb-3">۱. عوامل زیان‌آور محیط کار (Hazards)</h3>
+                     {worker.healthAssessment ? (
+                        <div className="grid grid-cols-3 gap-3">
+                            {Object.entries(worker.healthAssessment.hazards).map(([k, v]) => (
+                                <div key={k} className={`p-2 border rounded flex items-center gap-2 ${v ? 'bg-red-50 border-red-300' : 'bg-green-50 border-green-300'}`}>
+                                    <div className={`w-4 h-4 rounded-full ${v ? 'bg-red-500' : 'bg-green-500'}`}></div>
+                                    <span className="text-sm font-bold uppercase">{k}</span>
+                                </div>
+                            ))}
+                        </div>
+                     ) : <div className="p-4 border border-dashed text-center text-slate-500">ارزیابی ثبت نشده است</div>}
+                 </div>
+
+                 {/* PPE */}
+                 <div className="mb-6">
+                    <h3 className="font-bold mb-3">۲. وضعیت وسایل حفاظت فردی (PPE)</h3>
+                    {worker.healthAssessment ? (
+                        <div className="p-4 border rounded bg-slate-50">
+                            <span className="font-bold">وضعیت کلی: </span>
+                            <span className={`px-3 py-1 rounded text-white text-sm ${worker.healthAssessment.ppeStatus === 'good' ? 'bg-green-600' : worker.healthAssessment.ppeStatus === 'moderate' ? 'bg-amber-500' : 'bg-red-600'}`}>
+                                {worker.healthAssessment.ppeStatus === 'good' ? 'مطلوب' : worker.healthAssessment.ppeStatus === 'moderate' ? 'متوسط/نیاز آموزش' : 'نامطلوب'}
+                            </span>
+                        </div>
+                    ) : <div className="p-4 border border-dashed text-center text-slate-500">---</div>}
+                 </div>
+
+                 {/* Description */}
+                 <div className="mb-8">
+                     <h3 className="font-bold mb-3">۳. توضیحات کارشناس</h3>
+                     <div className="border rounded p-4 h-32 bg-slate-50 text-sm leading-relaxed">
+                         {worker.healthAssessment?.description || 'توضیحات تکمیلی ثبت نشده است.'}
+                     </div>
+                 </div>
+
+                 {/* Health Officer Signature */}
+                 <div className="absolute bottom-10 left-10 w-64 border-t border-black pt-2 text-center">
+                     <div className="font-bold text-sm">مهر و امضاء کارشناس بهداشت حرفه‌ای</div>
+                     <div className="text-xs text-slate-500 mt-1">{worker.healthAssessment?.officerName || '---'}</div>
+                     <div className="h-20"></div> {/* Space for signature */}
+                 </div>
             </div>
 
-            {/* Section 1: Personal Info */}
-            <div className="mb-6">
-                <h3 className="text-lg font-bold border-r-4 border-black pr-2 mb-3 bg-gray-100 p-1">مشخصات فردی</h3>
-                <div className="grid grid-cols-2 gap-4 text-sm border border-gray-300 p-4 rounded">
-                    <div><span className="font-bold ml-2">نام و نام خانوادگی:</span>{worker.name}</div>
-                    <div><span className="font-bold ml-2">کد ملی:</span>{worker.nationalId}</div>
-                    <div><span className="font-bold ml-2">واحد سازمانی:</span>{worker.department}</div>
-                    <div><span className="font-bold ml-2">سابقه کار:</span>{worker.workYears} سال</div>
-                    <div><span className="font-bold ml-2">تاریخ معاینه:</span>{toJalali(latestExam.date)}</div>
-                    <div><span className="font-bold ml-2">نوع معاینه:</span>ادواری</div>
-                </div>
+            {/* PAGE 2: CLINICAL EXAM (PART 1) */}
+            <div className="print-page relative" style={{ width: '210mm', height: '297mm', backgroundColor: 'white', color: 'black', padding: '15mm', direction: 'rtl', fontFamily: 'Vazirmatn' }}>
+                 <div className="border-b-2 border-black pb-4 mb-6 text-center">
+                    <h1 className="text-xl font-black">پرونده پزشکی سلامت شغلی (بخش اول)</h1>
+                    <h2 className="text-sm">Clinical Examination - Part 1</h2>
+                 </div>
+
+                 {/* Medical History */}
+                 <div className="mb-6">
+                     <h3 className="font-bold bg-slate-100 p-2 rounded mb-2">۴. سوابق پزشکی (Medical History)</h3>
+                     <table className="w-full text-xs border-collapse border border-slate-300">
+                         <thead>
+                             <tr className="bg-slate-50"><th className="border p-1 text-right">سوال</th><th className="border p-1 w-10">وضعیت</th><th className="border p-1">توضیحات</th></tr>
+                         </thead>
+                         <tbody>
+                             {latestExam.medicalHistory.filter(h => h.hasCondition).length > 0 ? (
+                                 latestExam.medicalHistory.filter(h => h.hasCondition).map(h => (
+                                     <tr key={h.id}><td className="border p-1">{h.question}</td><td className="border p-1 text-center font-bold text-red-600">بله</td><td className="border p-1">{h.description}</td></tr>
+                                 ))
+                             ) : (
+                                 <tr><td colSpan={3} className="border p-4 text-center text-slate-500">هیچ سابقه بیماری ذکر نشد.</td></tr>
+                             )}
+                         </tbody>
+                     </table>
+                 </div>
+
+                 {/* Organ Systems */}
+                 <div className="mb-6">
+                     <h3 className="font-bold bg-slate-100 p-2 rounded mb-2">۵. معاینه اندام‌ها (Organ Systems)</h3>
+                     <div className="grid grid-cols-2 gap-4">
+                        {(Object.values(latestExam.organSystems) as OrganSystemFinding[]).filter(sys => sys.symptoms.length > 0 || sys.signs.length > 0).length > 0 ? (
+                             (Object.values(latestExam.organSystems) as OrganSystemFinding[]).filter(sys => sys.symptoms.length > 0 || sys.signs.length > 0).map((sys, idx) => (
+                                 <div key={idx} className="border border-red-300 bg-red-50 p-2 rounded">
+                                     <div className="font-bold text-sm text-red-800">{SYSTEM_LABELS[sys.systemName]}</div>
+                                     <div className="text-xs mt-1"><span className="font-semibold">علائم:</span> {sys.symptoms.join(', ')}</div>
+                                     <div className="text-xs"><span className="font-semibold">نشانه‌ها:</span> {sys.signs.join(', ')}</div>
+                                 </div>
+                             ))
+                        ) : (
+                            <div className="col-span-2 p-4 border border-green-300 bg-green-50 rounded text-center text-green-800 font-bold">معاینه فیزیکی تمامی اندام‌ها نرمال ارزیابی شد.</div>
+                        )}
+                     </div>
+                 </div>
+
+                 {/* Vitals */}
+                 <div className="grid grid-cols-2 gap-6">
+                     <div className="border p-4 rounded">
+                         <h3 className="font-bold mb-2 text-sm">علائم حیاتی</h3>
+                         <div className="flex justify-between text-sm"><span>فشار خون:</span> <span className="font-mono font-bold">{latestExam.bp} mmHg</span></div>
+                     </div>
+                     <div className="border p-4 rounded">
+                         <h3 className="font-bold mb-2 text-sm">بینایی سنجی</h3>
+                         <div className="text-xs space-y-1">
+                             <div className="flex justify-between"><span>حدت (چپ/راست):</span> <span className="font-mono">{latestExam.vision?.acuity.left.uncorrected} / {latestExam.vision?.acuity.right.uncorrected}</span></div>
+                             <div className="flex justify-between"><span>دید رنگ:</span> <span>{latestExam.vision?.colorVision}</span></div>
+                         </div>
+                     </div>
+                 </div>
             </div>
 
-            {/* Section 2: Vitals & Vision */}
-            <div className="mb-6 grid grid-cols-2 gap-6">
-                <div>
-                    <h3 className="text-lg font-bold border-r-4 border-black pr-2 mb-3 bg-gray-100 p-1">علائم حیاتی</h3>
-                    <div className="border border-gray-300 p-4 rounded text-sm">
-                        <div className="flex justify-between mb-2">
-                            <span>فشار خون:</span>
-                            <span className="font-mono font-bold">{latestExam.bp} mmHg</span>
+            {/* PAGE 3: PARACLINICAL & FINAL OPINION */}
+            <div className="print-page relative" style={{ width: '210mm', height: '297mm', backgroundColor: 'white', color: 'black', padding: '15mm', direction: 'rtl', fontFamily: 'Vazirmatn' }}>
+                 <div className="border-b-2 border-black pb-4 mb-6 text-center">
+                    <h1 className="text-xl font-black">پرونده پزشکی سلامت شغلی (بخش دوم)</h1>
+                    <h2 className="text-sm">Paraclinical Tests & Final Opinion</h2>
+                 </div>
+
+                 {/* Audiometry */}
+                 <div className="mb-6 border border-slate-300 p-4 rounded">
+                     <h3 className="font-bold mb-4 flex items-center gap-2"><Ear size={16}/> ۶. شنوایی سنجی (Audiometry)</h3>
+                     
+                     {/* Render the chart again for print */}
+                     <div style={{ width: '100%', height: '200px', direction: 'ltr' }}>
+                        <ResponsiveContainer>
+                            <LineChart data={audiogramData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="hz" />
+                                <YAxis reversed domain={[0, 120]} />
+                                <Legend />
+                                <Line type="monotone" dataKey="left" stroke="#3b82f6" strokeWidth={2} name="Left" isAnimationActive={false} dot={{r:3}} />
+                                <Line type="monotone" dataKey="right" stroke="#f43f5e" strokeWidth={2} name="Right" isAnimationActive={false} dot={{r:3}} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                     </div>
+
+                     <div className="flex gap-4 mt-4">
+                         <table className="w-1/2 text-xs border-collapse border border-slate-300 text-center">
+                            <thead className="bg-slate-100"><tr><th className="border p-1">Hz</th>{audiogramData.map(d => <th key={d.hz} className="border p-1">{d.hz}</th>)}</tr></thead>
+                            <tbody>
+                                <tr><td className="border font-bold">L</td>{audiogramData.map(d => <td key={d.hz} className="border">{d.left}</td>)}</tr>
+                                <tr><td className="border font-bold">R</td>{audiogramData.map(d => <td key={d.hz} className="border">{d.right}</td>)}</tr>
+                            </tbody>
+                         </table>
+                         <div className="w-1/2 border border-slate-300 p-2 text-xs">
+                             <div className="font-bold mb-1">تفسیر (Report):</div>
+                             {latestExam.hearing.report || '---'}
+                         </div>
+                     </div>
+                 </div>
+
+                 {/* Spirometry */}
+                 <div className="mb-6 border border-slate-300 p-4 rounded">
+                     <h3 className="font-bold mb-2 flex items-center gap-2"><Wind size={16}/> ۷. اسپیرومتری (Spirometry)</h3>
+                     
+                     {/* PRINTABLE SPIROMETRY CHART */}
+                     <div style={{ width: '100%', height: '180px', direction: 'ltr', marginBottom: '15px' }}>
+                        <ResponsiveContainer>
+                            <ComposedChart data={spiroTrendData}>
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="dateLabel" />
+                                <YAxis yAxisId="left" label={{ value: 'Vol (L)', angle: -90, position: 'insideLeft' }} />
+                                <YAxis yAxisId="right" orientation="right" domain={[0, 100]} label={{ value: '%', angle: 90, position: 'insideRight' }} />
+                                <Legend />
+                                <Bar yAxisId="left" dataKey="fvc" name="FVC" fill="#10b981" barSize={15} isAnimationActive={false} />
+                                <Bar yAxisId="left" dataKey="fev1" name="FEV1" fill="#3b82f6" barSize={15} isAnimationActive={false} />
+                                <Line yAxisId="right" type="monotone" dataKey="ratio" name="Ratio %" stroke="#f59e0b" strokeWidth={2} isAnimationActive={false} dot={{r:3}} />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                     </div>
+
+                     <div className="flex justify-between items-center bg-slate-50 p-2 rounded text-sm mb-2">
+                        <span>FVC: <b className="font-mono">{latestExam.spirometry.fvc}</b></span>
+                        <span>FEV1: <b className="font-mono">{latestExam.spirometry.fev1}</b></span>
+                        <span>Ratio: <b className="font-mono">{latestExam.spirometry.fev1_fvc}%</b></span>
+                        <span className={`px-2 py-0.5 rounded text-white ${spiroStatus.result === 'Normal' ? 'bg-green-600' : 'bg-red-500'}`}>{spiroStatus.result}</span>
+                     </div>
+                 </div>
+
+                 {/* Final Opinion */}
+                 <div className="mt-auto mb-10 border-2 border-black rounded-xl p-6 bg-slate-50">
+                    <h3 className="font-black text-lg mb-4 text-center border-b border-slate-300 pb-2">۸. نظریه نهایی پزشک (Final Opinion)</h3>
+                    <div className="flex justify-center gap-8 mb-6">
+                        <div className="flex items-center gap-2">
+                            <div className={`w-6 h-6 border-2 border-black rounded-full ${latestExam.finalOpinion.status === 'fit' ? 'bg-black' : ''}`}></div>
+                            <span className="font-bold">بلامانع (Fit)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className={`w-6 h-6 border-2 border-black rounded-full ${latestExam.finalOpinion.status === 'conditional' ? 'bg-black' : ''}`}></div>
+                            <span className="font-bold">مشروط (Conditional)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className={`w-6 h-6 border-2 border-black rounded-full ${latestExam.finalOpinion.status === 'unfit' ? 'bg-black' : ''}`}></div>
+                            <span className="font-bold">عدم صلاحیت (Unfit)</span>
                         </div>
                     </div>
-                </div>
-                <div>
-                     <h3 className="text-lg font-bold border-r-4 border-black pr-2 mb-3 bg-gray-100 p-1">بینایی سنجی</h3>
-                     <div className="border border-gray-300 p-4 rounded text-sm">
-                        {latestExam.vision ? (
-                            <>
-                            <div className="flex justify-between mb-1"><span>حدت دید (چپ):</span> <span className="font-mono">{latestExam.vision.acuity.left.uncorrected}</span></div>
-                            <div className="flex justify-between mb-1"><span>حدت دید (راست):</span> <span className="font-mono">{latestExam.vision.acuity.right.uncorrected}</span></div>
-                            <div className="flex justify-between"><span>دید رنگ:</span> <span>{latestExam.vision.colorVision}</span></div>
-                            </>
-                        ) : 'ثبت نشده'}
-                     </div>
-                </div>
-            </div>
-
-            {/* Section 3: Audiometry */}
-            <div className="mb-6">
-                <h3 className="text-lg font-bold border-r-4 border-black pr-2 mb-3 bg-gray-100 p-1">شنوایی سنجی (Audiometry - dB HL)</h3>
-                <table className="w-full text-sm border-collapse border border-gray-400 text-center">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border border-gray-400 p-1">گوش / فرکانس</th>
-                            <th className="border border-gray-400 p-1">250 Hz</th>
-                            <th className="border border-gray-400 p-1">500 Hz</th>
-                            <th className="border border-gray-400 p-1">1000 Hz</th>
-                            <th className="border border-gray-400 p-1">2000 Hz</th>
-                            <th className="border border-gray-400 p-1">4000 Hz</th>
-                            <th className="border border-gray-400 p-1">8000 Hz</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td className="border border-gray-400 p-1 font-bold">چپ (Left)</td>
-                            {latestExam.hearing.left.map((v, i) => <td key={i} className="border border-gray-400 p-1">{v}</td>)}
-                        </tr>
-                         <tr>
-                            <td className="border border-gray-400 p-1 font-bold">راست (Right)</td>
-                            {latestExam.hearing.right.map((v, i) => <td key={i} className="border border-gray-400 p-1">{v}</td>)}
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            {/* Section 4: Spirometry */}
-            <div className="mb-6">
-                 <h3 className="text-lg font-bold border-r-4 border-black pr-2 mb-3 bg-gray-100 p-1">اسپیرومتری (Spirometry)</h3>
-                 <table className="w-full text-sm border-collapse border border-gray-400 text-center">
-                    <thead>
-                        <tr className="bg-gray-100">
-                            <th className="border border-gray-400 p-2">FVC (L)</th>
-                            <th className="border border-gray-400 p-2">FEV1 (L)</th>
-                            <th className="border border-gray-400 p-2">FEV1/FVC %</th>
-                            <th className="border border-gray-400 p-2">PEF</th>
-                            <th className="border border-gray-400 p-2">تفسیر</th>
-                        </tr>
-                    </thead>
-                     <tbody>
-                        <tr>
-                            <td className="border border-gray-400 p-2">{latestExam.spirometry.fvc}</td>
-                            <td className="border border-gray-400 p-2">{latestExam.spirometry.fev1}</td>
-                            <td className="border border-gray-400 p-2">{latestExam.spirometry.fev1_fvc}</td>
-                            <td className="border border-gray-400 p-2">{latestExam.spirometry.pef}</td>
-                            <td className="border border-gray-400 p-2 font-bold">{spiroStatus.result}</td>
-                        </tr>
-                     </tbody>
-                 </table>
-            </div>
-
-            {/* Section 5: History Summary */}
-            <div className="mb-6">
-                <h3 className="text-lg font-bold border-r-4 border-black pr-2 mb-3 bg-gray-100 p-1">خلاصه سوابق پزشکی</h3>
-                <div className="border border-gray-300 p-4 rounded text-sm min-h-[60px]">
-                    {latestExam.medicalHistory.filter(h => h.hasCondition).length > 0 ? (
-                        <ul className="list-disc list-inside">
-                            {latestExam.medicalHistory.filter(h => h.hasCondition).map(h => (
-                                <li key={h.id}>{h.question}: {h.description}</li>
-                            ))}
-                        </ul>
-                    ) : (
-                        <span className="text-gray-500">مورد قابل توجهی ثبت نشده است.</span>
-                    )}
-                </div>
-            </div>
-
-            {/* Section 6: Final Opinion */}
-            <div className="mb-10">
-                <h3 className="text-lg font-bold border-r-4 border-black pr-2 mb-3 bg-gray-100 p-1">نظریه نهایی پزشک</h3>
-                <div className="border-2 border-black p-4 rounded-lg">
-                    <div className="grid grid-cols-3 gap-4 mb-4 text-center">
-                        <div className={`p-2 border ${latestExam.finalOpinion.status === 'fit' ? 'bg-black text-white font-bold' : 'border-gray-300'}`}>بلامانع</div>
-                        <div className={`p-2 border ${latestExam.finalOpinion.status === 'conditional' ? 'bg-black text-white font-bold' : 'border-gray-300'}`}>مشروط</div>
-                        <div className={`p-2 border ${latestExam.finalOpinion.status === 'unfit' ? 'bg-black text-white font-bold' : 'border-gray-300'}`}>عدم صلاحیت</div>
+                    <div>
+                        <span className="font-bold text-sm block mb-1">توصیه‌ها / محدودیت‌ها:</span>
+                        <p className="text-sm border-b border-dotted border-slate-400 pb-1">{latestExam.finalOpinion.recommendations || '---'}</p>
                     </div>
-                    <div className="text-sm">
-                        <p className="font-bold mb-1">توصیه ها و محدودیت ها:</p>
-                        <p className="min-h-[40px]">{latestExam.finalOpinion.recommendations || 'ندارد'}</p>
-                    </div>
-                </div>
-            </div>
+                 </div>
 
-            {/* Signatures */}
-            <div className="flex justify-between mt-12 pt-8 border-t border-gray-300">
-                <div className="text-center w-1/3">
-                    <p className="font-bold mb-8">امضاء و اثر انگشت شاغل</p>
-                    <div className="border-b border-gray-400 w-32 mx-auto"></div>
-                </div>
-                <div className="text-center w-1/3">
-                    <p className="font-bold mb-8">مهر و امضاء پزشک متخصص طب کار</p>
-                    <div className="border-b border-gray-400 w-32 mx-auto"></div>
-                </div>
-            </div>
-            
-            <div className="text-center text-xs text-gray-400 mt-12">
-                این گزارش توسط سیستم هوشمند مدیریت سلامت شغلی ایجاد شده است.
+                 {/* Doctor Signature */}
+                 <div className="absolute bottom-10 left-10 w-64 border-t border-black pt-2 text-center">
+                     <div className="font-bold text-sm">مهر و امضاء پزشک متخصص طب کار</div>
+                     <div className="h-24"></div> 
+                 </div>
+                 
+                 {/* Worker Signature */}
+                 <div className="absolute bottom-10 right-10 w-64 border-t border-black pt-2 text-center">
+                     <div className="font-bold text-sm">امضاء و اثر انگشت شاغل</div>
+                     <div className="h-24"></div> 
+                 </div>
             </div>
         </div>
         </>

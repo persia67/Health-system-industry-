@@ -1,16 +1,34 @@
-export type Role = 'doctor' | 'health_officer';
+
+export type Role = 'doctor' | 'health_officer' | 'manager' | 'developer';
 
 export interface User {
+  id: string;
+  username: string;
+  password?: string; // Optional for when listing users securely
   role: Role;
   name: string;
+  createdAt: string;
+}
+
+export interface LicenseInfo {
+  isActive: boolean;
+  type: 'trial' | 'full';
+  activationDate: string;
+  trialDaysRemaining?: number;
+  serialKey?: string;
 }
 
 // Audiometry frequencies: 250, 500, 1000, 2000, 4000, 8000 Hz
 export interface HearingData {
-  left: number[];  // Array of 6 values corresponding to frequencies
-  right: number[]; // Array of 6 values corresponding to frequencies
-  averageLeft?: number; // Calculated average
-  averageRight?: number; // Calculated average
+  left: number[];  // Array of 6 values corresponding to frequencies (Air Conduction)
+  right: number[]; // Array of 6 values corresponding to frequencies (Air Conduction)
+  
+  // New fields based on the uploaded form
+  speech: {
+    left: { srt: string; sds: string; ucl?: string };
+    right: { srt: string; sds: string; ucl?: string };
+  };
+  report: string; // Audiology Report text box
 }
 
 export interface SpirometryData {
@@ -88,6 +106,24 @@ export interface Exam {
   finalOpinion: FinalOpinion;
 }
 
+// New Interface for Health Officer Form
+export interface HealthAssessment {
+  date: string;
+  officerName: string;
+  hazards: Record<string, boolean>; // Changed to dynamic record for flexibility
+  ppeStatus: 'good' | 'moderate' | 'poor';
+  description: string;
+  needsDoctorVisit: boolean;
+}
+
+export interface SpecialistFollowUp {
+  date: string;
+  doctorNote: string;
+  result: 'cleared' | 'permanent_restriction' | 'observation';
+}
+
+export type ReferralStatus = 'none' | 'waiting_for_doctor' | 'pending_specialist_result';
+
 export interface Worker {
   id: number;
   nationalId: string;
@@ -95,6 +131,11 @@ export interface Worker {
   department: string;
   workYears: number;
   exams: Exam[];
+  
+  // Workflow fields
+  healthAssessment?: HealthAssessment;
+  referralStatus: ReferralStatus;
+  specialistFollowUp?: SpecialistFollowUp;
 }
 
 export interface Alert {

@@ -3,23 +3,36 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   PieChart, Pie, Cell, LineChart, Line, Legend 
 } from 'recharts';
-import { Users, FileText, AlertTriangle, TrendingUp, Activity } from 'lucide-react';
+import { Users, FileText, AlertTriangle, TrendingUp, Activity, ArrowLeft } from 'lucide-react';
 import { Worker } from '../types';
 
 interface DashboardProps {
   workers: Worker[];
+  onViewCritical: () => void;
 }
 
 const COLORS = ['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e'];
 
-const Dashboard: React.FC<DashboardProps> = ({ workers }) => {
+const Dashboard: React.FC<DashboardProps> = ({ workers, onViewCritical }) => {
   // Aggregate stats
   const totalWorkers = workers.length;
   const totalExams = workers.reduce((acc, w) => acc + w.exams.length, 0);
   const criticalCases = workers.filter(w => {
     const lastExam = w.exams[0];
+    const isReferred = w.referralStatus !== 'none';
+    if (isReferred) return true;
+    
     if (!lastExam) return false;
-    return lastExam.hearing.left < 25 || lastExam.hearing.right < 25 || lastExam.spirometry.interpretation !== 'Normal';
+    
+    // Calculate average hearing loss
+    const avgLeft = lastExam.hearing.left.length > 0 
+      ? lastExam.hearing.left.reduce((a, b) => a + b, 0) / lastExam.hearing.left.length 
+      : 0;
+    const avgRight = lastExam.hearing.right.length > 0 
+      ? lastExam.hearing.right.reduce((a, b) => a + b, 0) / lastExam.hearing.right.length 
+      : 0;
+
+    return avgLeft > 25 || avgRight > 25 || lastExam.spirometry.interpretation !== 'Normal' || lastExam.finalOpinion.status !== 'fit';
   }).length;
   
   const avgHealth = 82; // Mocked for now
@@ -42,9 +55,15 @@ const Dashboard: React.FC<DashboardProps> = ({ workers }) => {
     { name: 'شهریور', exams: 30, issues: 4 },
   ];
 
-  const StatCard = ({ icon: Icon, title, value, colorClass }: any) => (
-    <div className={`rounded-2xl p-6 border border-white/10 backdrop-blur-md bg-gradient-to-br ${colorClass} shadow-xl transform transition-all hover:scale-[1.02]`}>
-      <Icon className="w-10 h-10 text-white/80 mb-4" />
+  const StatCard = ({ icon: Icon, title, value, colorClass, onClick, clickable }: any) => (
+    <div 
+        onClick={onClick}
+        className={`rounded-2xl p-6 border border-white/10 backdrop-blur-md bg-gradient-to-br ${colorClass} shadow-xl transform transition-all ${clickable ? 'cursor-pointer hover:scale-105 hover:shadow-2xl ring-2 ring-white/10 hover:ring-white/30' : 'hover:scale-[1.02]'}`}
+    >
+      <div className="flex justify-between items-start">
+          <Icon className="w-10 h-10 text-white/80 mb-4" />
+          {clickable && <div className="bg-white/20 p-1 rounded-full"><ArrowLeft className="w-4 h-4 text-white rotate-45" /></div>}
+      </div>
       <div className="text-4xl font-bold text-white mb-1">{value}</div>
       <p className="text-white/90 font-medium text-sm">{title}</p>
     </div>
@@ -70,7 +89,9 @@ const Dashboard: React.FC<DashboardProps> = ({ workers }) => {
           icon={AlertTriangle} 
           title="موارد نیازمند پیگیری" 
           value={criticalCases} 
-          colorClass="from-orange-600 to-red-600" 
+          colorClass="from-orange-600 to-red-600"
+          onClick={onViewCritical}
+          clickable={true}
         />
         <StatCard 
           icon={TrendingUp} 
