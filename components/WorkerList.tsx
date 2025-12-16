@@ -58,7 +58,7 @@ const WorkerList: React.FC<Props> = ({ workers, onSelectWorker }) => {
                         <select 
                             className="w-full md:w-48 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white appearance-none cursor-pointer"
                             value={filterStatus}
-                            onChange={e => setFilterStatus(e.target.value as any)}
+                            onChange={e => setFilterStatus(e.target.value as ReferralStatus | 'all')}
                         >
                             <option value="all">همه وضعیت‌ها</option>
                             <option value="none">نرمال</option>
