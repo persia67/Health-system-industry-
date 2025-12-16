@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Trash2, UserPlus, Shield, User, KeyRound } from 'lucide-react';
+import { Trash2, UserPlus, Shield, User, KeyRound, CheckCircle } from 'lucide-react';
 import { AuthService } from '../services/authService';
 import { User as UserType, Role } from '../types';
 
@@ -8,17 +8,22 @@ const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserType[]>([]);
   const [newUser, setNewUser] = useState({ name: '', username: '', password: '', role: 'health_officer' as Role });
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
     loadUsers();
   }, []);
 
   const loadUsers = () => {
-    setUsers(AuthService.getUsers());
+    const loaded = AuthService.getUsers();
+    setUsers(loaded);
   };
 
   const handleAddUser = (e: React.FormEvent) => {
       e.preventDefault();
+      setError('');
+      setSuccessMsg('');
+
       if (!newUser.name || !newUser.username || !newUser.password) {
           setError('لطفا تمام فیلدها را پر کنید');
           return;
@@ -28,9 +33,10 @@ const UserManagement: React.FC = () => {
       if (success) {
           loadUsers();
           setNewUser({ name: '', username: '', password: '', role: 'health_officer' });
-          setError('');
+          setSuccessMsg('کاربر با موفقیت ایجاد شد.');
+          setTimeout(() => setSuccessMsg(''), 3000);
       } else {
-          setError('نام کاربری تکراری است');
+          setError('نام کاربری تکراری است یا خطایی رخ داده است.');
       }
   };
 
@@ -38,8 +44,10 @@ const UserManagement: React.FC = () => {
       if (confirm('آیا از حذف این کاربر اطمینان دارید؟')) {
           if (AuthService.deleteUser(id)) {
               loadUsers();
+              setSuccessMsg('کاربر حذف شد.');
+              setTimeout(() => setSuccessMsg(''), 3000);
           } else {
-              alert('امکان حذف مدیر سیستم وجود ندارد');
+              alert('امکان حذف مدیر سیستم وجود ندارد یا کاربر یافت نشد.');
           }
       }
   };
@@ -47,8 +55,11 @@ const UserManagement: React.FC = () => {
   const handleResetPassword = (id: string, name: string) => {
       const newPass = prompt(`لطفا رمز عبور جدید برای "${name}" را وارد کنید:`);
       if (newPass) {
-          AuthService.resetPassword(id, newPass);
-          alert('رمز عبور با موفقیت تغییر کرد.');
+          if(AuthService.resetPassword(id, newPass)) {
+            alert('رمز عبور با موفقیت تغییر کرد.');
+          } else {
+            alert('خطا در تغییر رمز عبور.');
+          }
       }
   };
 
@@ -76,8 +87,13 @@ const UserManagement: React.FC = () => {
         <div className="grid lg:grid-cols-3 gap-8">
             {/* User List */}
             <div className="lg:col-span-2 space-y-4">
+                {users.length === 0 && (
+                    <div className="text-center p-8 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-white/10 text-slate-500">
+                        کاربری یافت نشد.
+                    </div>
+                )}
                 {users.map(u => (
-                    <div key={u.id} className="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5 flex justify-between items-center shadow-sm dark:shadow-none">
+                    <div key={u.id} className="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5 flex justify-between items-center shadow-sm dark:shadow-none transition-all hover:border-cyan-500/30">
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
                                 <User className="text-slate-500 dark:text-slate-400 w-6 h-6" />
@@ -115,12 +131,18 @@ const UserManagement: React.FC = () => {
             </div>
 
             {/* Add User Form */}
-            <div className="bg-white dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-white/10 h-fit shadow-xl dark:shadow-none">
+            <div className="bg-white dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-white/10 h-fit shadow-xl dark:shadow-none sticky top-24">
                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                     <UserPlus className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
                     افزودن کاربر جدید
                 </h3>
                 <form onSubmit={handleAddUser} className="space-y-4">
+                    {successMsg && (
+                        <div className="bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 p-3 rounded-lg text-sm flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" /> {successMsg}
+                        </div>
+                    )}
+
                     <div>
                         <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">نام و نام خانوادگی (نمایش در سیستم)</label>
                         <input 
@@ -170,7 +192,7 @@ const UserManagement: React.FC = () => {
 
                     {error && <p className="text-red-500 dark:text-red-400 text-xs">{error}</p>}
                     
-                    <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors">
+                    <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-emerald-900/20">
                         ثبت کاربر
                     </button>
                 </form>

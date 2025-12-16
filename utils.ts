@@ -1,3 +1,4 @@
+
 export const toJalali = (dateStr: string): string => {
   const d = new Date(dateStr);
   const gy = d.getFullYear();
@@ -24,5 +25,6 @@ export const toJalali = (dateStr: string): string => {
 };
 
 export const generateId = (): string => {
-  return Math.random().toString(36).substr(2, 9);
+  // Combine timestamp and random string to ensure uniqueness
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
 };

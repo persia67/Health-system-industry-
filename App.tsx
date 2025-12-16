@@ -8,6 +8,7 @@ import ChatWidget from './components/ChatWidget';
 import HealthOfficerAssessment from './components/HealthOfficerAssessment';
 import DoctorWorklist from './components/DoctorWorklist';
 import CriticalCasesList from './components/CriticalCasesList';
+import WorkerList from './components/WorkerList';
 import Login from './components/Login';
 import LicenseActivation from './components/LicenseActivation';
 import UserManagement from './components/UserManagement';
@@ -126,13 +127,12 @@ const AUDIOMETRY_FREQUENCIES = [250, 500, 1000, 2000, 4000, 8000];
 const App = () => {
   const [appState, setAppState] = useState<'license' | 'login' | 'app'>('license');
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'search' | 'newExam' | 'newWorker' | 'worklist' | 'critical_list' | 'user_management'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'worker_list' | 'newExam' | 'newWorker' | 'worklist' | 'critical_list' | 'user_management'>('dashboard');
   
   // Data State - Initialized from Storage
   const [workers, setWorkers] = useState<Worker[]>([]); 
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null);
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [isGeneratingRecommendation, setIsGeneratingRecommendation] = useState(false);
   
@@ -179,7 +179,10 @@ const App = () => {
 
     // 4. Check License
     const license = AuthService.getLicenseInfo();
-    if (license.isActive) {
+    
+    // Only bypass activation screen if it is a FULL license.
+    // Trial licenses (active or expired) must see the license screen on startup.
+    if (license.type === 'full') {
         setAppState('login');
     } else {
         setAppState('license');
@@ -205,12 +208,6 @@ const App = () => {
 
   const handleLicenseActivated = () => {
       setAppState('login');
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const worker = workers.find(w => w.nationalId === searchQuery);
-    worker ? setSelectedWorker(worker) : alert('کارگری با این کد ملی یافت نشد.');
   };
 
   // Workflow: Health Officer Saves Assessment
@@ -459,7 +456,7 @@ const App = () => {
   // --- Doctor Views vs Health Officer vs Manager Logic ---
   const renderNav = () => {
       const baseNav = (
-          <button onClick={() => setActiveTab('search')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'search' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><Search className="w-5 h-5" />جستجو</button>
+          <button onClick={() => setActiveTab('worker_list')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'worker_list' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><Users className="w-5 h-5" />لیست پرسنل</button>
       );
 
       if (user.role === 'manager' || user.role === 'developer') {
@@ -662,13 +659,12 @@ const App = () => {
                 />
             )}
 
-            {/* Search */}
-            {activeTab === 'search' && (
-               <div className="max-w-2xl mx-auto mt-12 text-center bg-white dark:bg-slate-800/50 p-10 rounded-2xl border border-slate-200 dark:border-white/10 shadow-xl dark:shadow-none">
-                  <Search className="w-12 h-12 text-cyan-500 dark:text-cyan-400 mx-auto mb-6" />
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">جستجوی پرونده پزشکی</h2>
-                  <form onSubmit={handleSearch} className="flex gap-3"><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="کد ملی..." className="flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-white/20 rounded-xl px-6 py-4 text-slate-900 dark:text-white text-center" /><button type="submit" className="bg-cyan-500 hover:bg-cyan-600 px-8 py-4 rounded-xl font-bold text-white">جستجو</button></form>
-               </div>
+            {/* Personnel List (Replaces Search) */}
+            {activeTab === 'worker_list' && (
+               <WorkerList 
+                  workers={workers} 
+                  onSelectWorker={(w) => setSelectedWorker(w)} 
+               />
             )}
 
             {/* New Worker: Health Officer Only */}

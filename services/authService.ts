@@ -8,49 +8,71 @@ const TRIAL_DURATION_DAYS = 7;
 
 // Seed Default Users
 const seedUsers = () => {
-    // Check if users exist. If not, seed them.
-    // NOTE: In a real scenario, we might check if the list is empty. 
-    // Here we ensure at least the default admin exists if the key is missing.
-    if (!localStorage.getItem(USERS_KEY)) {
-        const defaultUsers: User[] = [
-            {
-                id: 'dev-001',
-                username: 'admin',
-                password: '123', // In a real app, hash this!
-                role: 'developer',
-                name: 'مدیر سیستم',
-                createdAt: new Date().toISOString()
-            },
-            {
-                id: 'doc-001',
-                username: 'doctor',
-                password: '123',
-                role: 'doctor',
-                name: 'دکتر محمدی (پزشک طب کار)',
-                createdAt: new Date().toISOString()
-            },
-            {
-                id: 'hse-001',
-                username: 'hse',
-                password: '123',
-                role: 'health_officer',
-                name: 'مهندس رضایی (کارشناس بهداشت)',
-                createdAt: new Date().toISOString()
+    try {
+        const existingUsers = localStorage.getItem(USERS_KEY);
+        
+        // Only seed if absolutely no data exists
+        if (!existingUsers) {
+            const defaultUsers: User[] = [
+                {
+                    id: 'dev-001',
+                    username: 'admin',
+                    password: '123',
+                    role: 'developer',
+                    name: 'مدیر سیستم',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: 'doc-001',
+                    username: 'doctor',
+                    password: '123',
+                    role: 'doctor',
+                    name: 'دکتر محمدی (پزشک طب کار)',
+                    createdAt: new Date().toISOString()
+                },
+                {
+                    id: 'hse-001',
+                    username: 'hse',
+                    password: '123',
+                    role: 'health_officer',
+                    name: 'مهندس رضایی (کارشناس بهداشت)',
+                    createdAt: new Date().toISOString()
+                }
+            ];
+            localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+        } else {
+            // Check for data corruption
+            try {
+                const parsed = JSON.parse(existingUsers);
+                if (!Array.isArray(parsed)) {
+                    console.warn("User data corrupted, resetting to defaults.");
+                    localStorage.removeItem(USERS_KEY);
+                    seedUsers(); // Retry seed
+                }
+            } catch (e) {
+                console.warn("User JSON invalid, resetting to defaults.");
+                localStorage.removeItem(USERS_KEY);
+                seedUsers(); // Retry seed
             }
-        ];
-        localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
+        }
+    } catch (e) {
+        console.error("Storage access failed during seed:", e);
     }
 };
 
 // Seed License Info
 const seedLicense = () => {
-    if (!localStorage.getItem(LICENSE_KEY)) {
-        const license: LicenseInfo = {
-            isActive: true,
-            type: 'trial',
-            activationDate: new Date().toISOString()
-        };
-        localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+    try {
+        if (!localStorage.getItem(LICENSE_KEY)) {
+            const license: LicenseInfo = {
+                isActive: true,
+                type: 'trial',
+                activationDate: new Date().toISOString()
+            };
+            localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+        }
+    } catch (e) {
+        console.error("Storage access failed during license seed:", e);
     }
 };
 
@@ -62,8 +84,14 @@ export const AuthService = {
 
     // --- User Management ---
     getUsers: (): User[] => {
-        const usersStr = localStorage.getItem(USERS_KEY);
-        return usersStr ? JSON.parse(usersStr) : [];
+        try {
+            const usersStr = localStorage.getItem(USERS_KEY);
+            if (!usersStr) return [];
+            return JSON.parse(usersStr);
+        } catch (e) {
+            console.error("Failed to load users:", e);
+            return [];
+        }
     },
 
     login: (username: string, password: string): User | null => {
@@ -73,77 +101,107 @@ export const AuthService = {
     },
 
     createUser: (user: Omit<User, 'id' | 'createdAt'>): boolean => {
-        const users = AuthService.getUsers();
-        if (users.some(u => u.username.toLowerCase() === user.username.toLowerCase())) return false; // Duplicate
-        
-        const newUser: User = {
-            ...user,
-            id: generateId(),
-            createdAt: new Date().toISOString()
-        };
-        
-        users.push(newUser);
-        localStorage.setItem(USERS_KEY, JSON.stringify(users));
-        return true;
+        try {
+            const users = AuthService.getUsers();
+            if (users.some(u => u.username.toLowerCase() === user.username.toLowerCase())) return false; // Duplicate
+            
+            const newUser: User = {
+                ...user,
+                id: generateId(),
+                createdAt: new Date().toISOString()
+            };
+            
+            users.push(newUser);
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            return true;
+        } catch (e) {
+            console.error("Failed to create user:", e);
+            return false;
+        }
     },
 
     deleteUser: (id: string): boolean => {
-        let users = AuthService.getUsers();
-        if (users.find(u => u.id === id)?.role === 'developer') return false; // Cannot delete initial dev
-        users = users.filter(u => u.id !== id);
-        localStorage.setItem(USERS_KEY, JSON.stringify(users));
-        return true;
+        try {
+            let users = AuthService.getUsers();
+            if (users.find(u => u.id === id)?.role === 'developer') return false; // Cannot delete initial dev
+            
+            const initialLength = users.length;
+            users = users.filter(u => u.id !== id);
+            
+            if (users.length === initialLength) return false; // User not found
+
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            return true;
+        } catch (e) {
+            console.error("Failed to delete user:", e);
+            return false;
+        }
     },
 
     resetPassword: (id: string, newPass: string): boolean => {
-        const users = AuthService.getUsers();
-        const userIndex = users.findIndex(u => u.id === id);
-        if (userIndex === -1) return false;
+        try {
+            const users = AuthService.getUsers();
+            const userIndex = users.findIndex(u => u.id === id);
+            if (userIndex === -1) return false;
 
-        users[userIndex].password = newPass;
-        localStorage.setItem(USERS_KEY, JSON.stringify(users));
-        return true;
+            users[userIndex].password = newPass;
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            return true;
+        } catch (e) {
+            console.error("Failed to reset password:", e);
+            return false;
+        }
     },
 
     // --- License Management ---
     getLicenseInfo: (): LicenseInfo => {
-        const licenseStr = localStorage.getItem(LICENSE_KEY);
-        if (!licenseStr) {
-            seedLicense();
-            return AuthService.getLicenseInfo();
-        }
-        
-        const license: LicenseInfo = JSON.parse(licenseStr);
-        
-        if (license.type === 'trial') {
-            const activationDate = new Date(license.activationDate);
-            const now = new Date();
-            const diffTime = Math.abs(now.getTime() - activationDate.getTime());
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-            const remaining = TRIAL_DURATION_DAYS - diffDays;
+        try {
+            const licenseStr = localStorage.getItem(LICENSE_KEY);
+            if (!licenseStr) {
+                seedLicense();
+                const retry = localStorage.getItem(LICENSE_KEY);
+                return retry ? JSON.parse(retry) : { isActive: false, type: 'trial', activationDate: '' };
+            }
             
-            return {
-                ...license,
-                isActive: remaining > 0,
-                trialDaysRemaining: Math.max(0, remaining)
-            };
+            const license: LicenseInfo = JSON.parse(licenseStr);
+            
+            if (license.type === 'trial') {
+                const activationDate = new Date(license.activationDate);
+                const now = new Date();
+                const diffTime = Math.abs(now.getTime() - activationDate.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                const remaining = TRIAL_DURATION_DAYS - diffDays;
+                
+                return {
+                    ...license,
+                    isActive: remaining > 0,
+                    trialDaysRemaining: Math.max(0, remaining)
+                };
+            }
+            return license;
+        } catch (e) {
+             console.error("Failed to get license info:", e);
+             return { isActive: false, type: 'trial', activationDate: '' };
         }
-        
-        return license;
     },
 
     activateLicense: (serial: string): boolean => {
-        // Mock Validation: Serial must start with "OHS-" and have 16 chars
-        if (serial.startsWith('OHS-') && serial.length >= 16) {
-            const newLicense: LicenseInfo = {
-                isActive: true,
-                type: 'full',
-                activationDate: new Date().toISOString(),
-                serialKey: serial
-            };
-            localStorage.setItem(LICENSE_KEY, JSON.stringify(newLicense));
-            return true;
+        try {
+            // Mock Validation: Serial must start with "OHS-" and have 16 chars
+            if (serial.startsWith('OHS-') && serial.length >= 16) {
+                const newLicense: LicenseInfo = {
+                    isActive: true,
+                    type: 'full',
+                    activationDate: new Date().toISOString(),
+                    serialKey: serial
+                };
+                localStorage.setItem(LICENSE_KEY, JSON.stringify(newLicense));
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error("Failed to activate license:", e);
+            return false;
         }
-        return false;
     }
 };

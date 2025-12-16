@@ -69,6 +69,8 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
   };
 
   const latestExam = worker.exams[0];
+  const baseExam = worker.exams[worker.exams.length - 1]; // First exam (Baseline)
+  
   const spiroStatus = latestExam ? analyzeSpirometry(latestExam.spirometry.fvc, latestExam.spirometry.fev1) : null;
 
   const handleGeneratePDF = async () => {
@@ -85,11 +87,10 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
 
         for (let i = 0; i < pages.length; i++) {
             const page = pages[i] as HTMLElement;
-            // Use html2canvas on each page div
             const canvas = await html2canvas(page, { 
                 scale: 2, 
                 useCORS: true, 
-                backgroundColor: isDark ? '#0f172a' : '#ffffff', // Match theme
+                backgroundColor: isDark ? '#0f172a' : '#ffffff',
                 logging: false
             });
             
@@ -98,7 +99,6 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
             if (i > 0) {
                 pdf.addPage();
             }
-            // Fit to A4
             pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
         }
 
@@ -118,7 +118,9 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
       }
   };
 
-  // Prepare Audiogram Data
+  // --- CHART DATA PREPARATION ---
+
+  // 1. Single Audiogram (Latest) for top card - Categorical X-Axis
   const audiogramData = latestExam ? [
       { hz: '250', left: latestExam.hearing.left[0], right: latestExam.hearing.right[0] },
       { hz: '500', left: latestExam.hearing.left[1], right: latestExam.hearing.right[1] },
@@ -128,18 +130,23 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
       { hz: '8k', left: latestExam.hearing.left[5], right: latestExam.hearing.right[5] },
   ] : [];
 
-  const historyData = worker.exams.map(exam => {
-    const avgLeft = exam.hearing.left.length > 0 ? exam.hearing.left.reduce((a, b) => a + b, 0) / exam.hearing.left.length : 0;
-    const avgRight = exam.hearing.right.length > 0 ? exam.hearing.right.reduce((a, b) => a + b, 0) / exam.hearing.right.length : 0;
-    return {
-      date: new Date(exam.date).getTime(),
-      dateLabel: toJalali(exam.date),
-      left: Math.round(avgLeft * 10) / 10,
-      right: Math.round(avgRight * 10) / 10,
-    };
-  }).sort((a, b) => a.date - b.date);
+  // 2. Comparative Audiogram (Baseline vs Current) - Numeric/Log X-Axis (20Hz - 20000Hz)
+  const frequencies = [20, 250, 500, 1000, 2000, 4000, 8000, 20000];
+  const freqMap: Record<number, number> = { 250:0, 500:1, 1000:2, 2000:3, 4000:4, 8000:5 };
+  
+  const comparisonAudiogramData = frequencies.map(f => {
+      const idx = freqMap[f];
+      const hasData = idx !== undefined;
+      return {
+          hz: f,
+          l_curr: (hasData && latestExam) ? latestExam.hearing.left[idx] : null,
+          r_curr: (hasData && latestExam) ? latestExam.hearing.right[idx] : null,
+          l_base: (hasData && baseExam) ? baseExam.hearing.left[idx] : null,
+          r_base: (hasData && baseExam) ? baseExam.hearing.right[idx] : null,
+      };
+  });
 
-  // Prepare Spirometry Trend Data
+  // 3. Spirometry Trend (Time based)
   const spiroTrendData = worker.exams.map(exam => ({
     date: new Date(exam.date).getTime(),
     dateLabel: toJalali(exam.date),
@@ -258,7 +265,7 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
         <div className="print-page space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
-                {/* Audiometry Chart */}
+                {/* Audiometry Chart (Standard View) */}
                 <div className="bg-white dark:bg-slate-800/50 backdrop-blur-xl rounded-2xl p-6 border border-slate-200 dark:border-white/10 shadow-lg dark:shadow-none">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -428,20 +435,47 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
                 </h3>
                 
                 <div className="grid md:grid-cols-2 gap-6">
+                    {/* Comparative Audiogram (Full Spectrum) */}
                     <div className="h-[250px]">
-                        <h4 className="text-xs text-center text-slate-500 dark:text-slate-400 mb-2">روند افت شنوایی (میانگین dB)</h4>
+                        <h4 className="text-xs text-center text-slate-500 dark:text-slate-400 mb-2">روند تغییرات شنوایی (مقایسه اولین و آخرین معاینه)</h4>
                         <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={historyData}>
+                            <LineChart data={comparisonAudiogramData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
-                                <XAxis dataKey="dateLabel" stroke={chartTextColor} tick={{fill: chartTextColor}} fontSize={10} />
-                                <YAxis reversed domain={[0, 50]} stroke={chartTextColor} tick={{fill: chartTextColor}} fontSize={10} />
+                                {/* Log Scale for Frequency 20Hz - 20000Hz */}
+                                <XAxis 
+                                    dataKey="hz" 
+                                    type="number" 
+                                    scale="log" 
+                                    domain={[20, 20000]} 
+                                    ticks={[20, 250, 500, 1000, 2000, 4000, 8000, 20000]}
+                                    tickFormatter={(tick) => tick >= 1000 ? (tick/1000) + 'k' : tick}
+                                    stroke={chartTextColor} 
+                                    tick={{fill: chartTextColor}} 
+                                    fontSize={10} 
+                                />
+                                <YAxis 
+                                    reversed 
+                                    domain={[0, 100]} 
+                                    label={{ value: 'dB HL', angle: -90, position: 'insideLeft', fill: chartTextColor, fontSize: 10 }}
+                                    stroke={chartTextColor} 
+                                    tick={{fill: chartTextColor}} 
+                                    fontSize={10} 
+                                />
                                 <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, color: tooltipText }} />
-                                <Legend />
-                                <Line type="monotone" dataKey="left" name="چپ" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                                <Line type="monotone" dataKey="right" name="راست" stroke="#ef4444" strokeWidth={2} dot={false} />
+                                <Legend wrapperStyle={{fontSize: '10px'}} />
+                                
+                                {/* Latest Exam */}
+                                <Line type="monotone" dataKey="l_curr" name="چپ (فعلی)" stroke="#3b82f6" strokeWidth={2} dot={{r: 3}} connectNulls />
+                                <Line type="monotone" dataKey="r_curr" name="راست (فعلی)" stroke="#ef4444" strokeWidth={2} dot={{r: 3}} connectNulls />
+                                
+                                {/* Base Exam (Dashed) */}
+                                <Line type="monotone" dataKey="l_base" name="چپ (پایه)" stroke="#93c5fd" strokeWidth={2} strokeDasharray="4 4" dot={false} connectNulls />
+                                <Line type="monotone" dataKey="r_base" name="راست (پایه)" stroke="#fca5a5" strokeWidth={2} strokeDasharray="4 4" dot={false} connectNulls />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
+
+                    {/* Spirometry Trend */}
                     <div className="h-[250px]">
                         <h4 className="text-xs text-center text-slate-500 dark:text-slate-400 mb-2">روند ظرفیت ریوی (FVC & FEV1)</h4>
                          <ResponsiveContainer width="100%" height="100%">
@@ -451,7 +485,7 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
                                 <YAxis yAxisId="left" stroke={chartTextColor} tick={{fill: chartTextColor}} fontSize={10} />
                                 <YAxis yAxisId="right" orientation="right" domain={[0, 100]} stroke={chartTextColor} tick={{fill: chartTextColor}} fontSize={10} />
                                 <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, color: tooltipText }} />
-                                <Legend />
+                                <Legend wrapperStyle={{fontSize: '10px'}} />
                                 <Bar yAxisId="left" dataKey="fvc" name="FVC" fill="#10b981" barSize={20} />
                                 <Bar yAxisId="left" dataKey="fev1" name="FEV1" fill="#059669" barSize={20} />
                                 <Line yAxisId="right" type="monotone" dataKey="ratio" name="Ratio %" stroke="#f59e0b" strokeWidth={2} />
