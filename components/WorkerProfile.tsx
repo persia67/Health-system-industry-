@@ -1,8 +1,8 @@
 
 import React, { useRef, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Bar } from 'recharts';
-import { AlertTriangle, Ear, Wind, Heart, FileText, ArrowLeft, Activity, Edit, Eye, TrendingUp, FileDown, Loader2, Info, CheckCircle, Shield } from 'lucide-react';
-import { Worker, Alert, OrganSystemFinding, ReferralStatus } from '../types';
+import { AlertTriangle, Ear, Wind, Heart, FileText, ArrowLeft, Activity, Edit, Eye, TrendingUp, FileDown, Loader2, Info, CheckCircle, Shield, X, Calendar } from 'lucide-react';
+import { Worker, Alert, OrganSystemFinding, ReferralStatus, Exam } from '../types';
 import { toJalali } from '../utils';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -32,6 +32,7 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showSpecialistModal, setShowSpecialistModal] = useState(false);
   const [specialistNote, setSpecialistNote] = useState('');
+  const [selectedExam, setSelectedExam] = useState<Exam | null>(null); // State for viewing history details
   const printRef = useRef<HTMLDivElement>(null);
   
   const analyzeSpirometry = (fvc: number, fev1: number) => {
@@ -130,6 +131,16 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
       { hz: '8k', left: latestExam.hearing.left[5], right: latestExam.hearing.right[5] },
   ] : [];
 
+  // Helper to generate data for the selected exam modal
+  const getExamAudiogramData = (exam: Exam) => [
+      { hz: '250', left: exam.hearing.left[0], right: exam.hearing.right[0] },
+      { hz: '500', left: exam.hearing.left[1], right: exam.hearing.right[1] },
+      { hz: '1k', left: exam.hearing.left[2], right: exam.hearing.right[2] },
+      { hz: '2k', left: exam.hearing.left[3], right: exam.hearing.right[3] },
+      { hz: '4k', left: exam.hearing.left[4], right: exam.hearing.right[4] },
+      { hz: '8k', left: exam.hearing.left[5], right: exam.hearing.right[5] },
+  ];
+
   // 2. Comparative Audiogram (Baseline vs Current) - Numeric/Log X-Axis (20Hz - 20000Hz)
   const frequencies = [20, 250, 500, 1000, 2000, 4000, 8000, 20000];
   const freqMap: Record<number, number> = { 250:0, 500:1, 1000:2, 2000:3, 4000:4, 8000:5 };
@@ -179,6 +190,119 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
                 <div className="flex gap-3">
                     <button onClick={() => setShowSpecialistModal(false)} className="flex-1 p-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">انصراف</button>
                     <button onClick={handleResolveReferral} className="flex-1 p-2 rounded-xl bg-emerald-600 text-white font-bold">تایید و خروج از لیست پیگیری</button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Exam Details Modal */}
+      {selectedExam && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div className="sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-white/10 p-4 flex justify-between items-center z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-500/20 rounded-lg">
+                            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">جزئیات معاینه</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">تاریخ: {toJalali(selectedExam.date)}</p>
+                        </div>
+                    </div>
+                    <button onClick={() => setSelectedExam(null)} className="p-2 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full transition-colors">
+                        <X className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                    </button>
+                </div>
+                
+                <div className="p-6 space-y-6">
+                    {/* Charts Row */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                         {/* Audiometry */}
+                         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5">
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2"><Ear className="w-4 h-4"/> شنوایی سنجی</h4>
+                            <div className="h-[200px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={getExamAudiogramData(selectedExam)}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
+                                    <XAxis dataKey="hz" stroke={chartTextColor} tick={{fill: chartTextColor, fontSize: 10}} />
+                                    <YAxis reversed domain={[0, 100]} stroke={chartTextColor} tick={{fill: chartTextColor, fontSize: 10}} />
+                                    <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, color: tooltipText }} />
+                                    <Line type="monotone" dataKey="left" stroke="#3b82f6" strokeWidth={2} dot={{r: 3}} />
+                                    <Line type="monotone" dataKey="right" stroke="#ef4444" strokeWidth={2} dot={{r: 3}} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                <p><strong>گزارش:</strong> {selectedExam.hearing.report || '---'}</p>
+                            </div>
+                         </div>
+
+                         {/* Spirometry */}
+                         <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5">
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2"><Wind className="w-4 h-4"/> اسپیرومتری</h4>
+                            {(() => {
+                                const analysis = analyzeSpirometry(selectedExam.spirometry.fvc, selectedExam.spirometry.fev1);
+                                return (
+                                    <div className="space-y-4">
+                                        <div className={`p-3 rounded-lg border ${analysis.badgeBg} border-transparent`}>
+                                            <div className={`font-bold ${analysis.color}`}>{analysis.result}</div>
+                                            <div className="text-xs mt-1 opacity-80">{analysis.explanation}</div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 text-center">
+                                            <div className="bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-white/10">
+                                                <div className="text-[10px] text-slate-500">FVC</div>
+                                                <div className="font-bold">{selectedExam.spirometry.fvc}</div>
+                                            </div>
+                                            <div className="bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-white/10">
+                                                <div className="text-[10px] text-slate-500">FEV1</div>
+                                                <div className="font-bold">{selectedExam.spirometry.fev1}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })()}
+                         </div>
+                    </div>
+
+                    {/* Systems & Lab */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5">
+                            <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2"><Activity className="w-4 h-4"/> یافته‌های بالینی</h4>
+                            <div className="space-y-2 max-h-[150px] overflow-y-auto custom-scrollbar">
+                                {Object.values(selectedExam.organSystems).some((sys: any) => sys.symptoms.length > 0 || sys.signs.length > 0) ? (
+                                    Object.entries(selectedExam.organSystems).map(([key, val]) => {
+                                        const sys = val as OrganSystemFinding;
+                                        if (sys.symptoms.length === 0 && sys.signs.length === 0) return null;
+                                        return (
+                                            <div key={key} className="text-xs p-2 bg-white dark:bg-slate-900 rounded border border-slate-200 dark:border-white/10">
+                                                <strong className="text-slate-700 dark:text-slate-300 block mb-1">{SYSTEM_LABELS[key] || key}</strong>
+                                                <span className="text-slate-500 dark:text-slate-400">
+                                                    {sys.symptoms.length > 0 && `علائم: ${sys.symptoms.join(', ')} `}
+                                                    {sys.signs.length > 0 && `نشانه‌ها: ${sys.signs.join(', ')}`}
+                                                </span>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="text-xs text-slate-500 text-center py-4">مورد غیرطبیعی گزارش نشده است.</div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5">
+                             <h4 className="text-sm font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2"><CheckCircle className="w-4 h-4"/> نظریه نهایی</h4>
+                             <div className={`p-3 rounded-lg text-center mb-3 ${selectedExam.finalOpinion.status === 'fit' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400'}`}>
+                                 <div className="font-bold text-lg">
+                                     {selectedExam.finalOpinion.status === 'fit' ? 'بلامانع' : selectedExam.finalOpinion.status === 'conditional' ? 'مشروط' : 'عدم صلاحیت'}
+                                 </div>
+                             </div>
+                             {selectedExam.finalOpinion.recommendations && (
+                                 <div className="text-xs text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded border border-slate-200 dark:border-white/10">
+                                     <strong>توصیه:</strong> {selectedExam.finalOpinion.recommendations}
+                                 </div>
+                             )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -510,8 +634,13 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
                          </thead>
                          <tbody className="divide-y divide-slate-200 dark:divide-white/5">
                              {worker.exams.map(exam => (
-                                 <tr key={exam.id} className="text-slate-700 dark:text-slate-300">
-                                     <td className="p-3">{toJalali(exam.date)}</td>
+                                 <tr 
+                                    key={exam.id} 
+                                    onClick={() => setSelectedExam(exam)}
+                                    className="text-slate-700 dark:text-slate-300 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-colors group"
+                                    title="برای مشاهده جزئیات کلیک کنید"
+                                 >
+                                     <td className="p-3 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">{toJalali(exam.date)}</td>
                                      <td className="p-3">
                                          <span className={`px-2 py-0.5 rounded text-xs ${exam.finalOpinion.status === 'fit' ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-400'}`}>
                                              {exam.finalOpinion.status === 'fit' ? 'بلامانع' : exam.finalOpinion.status === 'conditional' ? 'مشروط' : 'عدم صلاحیت'}
@@ -524,6 +653,7 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
                          </tbody>
                      </table>
                  </div>
+                 <p className="text-xs text-slate-400 mt-2 text-center">برای مشاهده جزئیات کامل، روی ردیف مورد نظر کلیک کنید.</p>
              </div>
         </div>
 
