@@ -207,7 +207,7 @@ const Login: React.FC<Props> = ({ onLogin }) => {
           )}
 
           <div className="mt-8 text-center border-t border-slate-200 dark:border-white/5 pt-4">
-              <p className="text-xs text-slate-500">نسخه ۱.۰.۰ | پشتیبانی فنی: ۰۲۱-۸۸۸۸۸۸۸۸</p>
+              <p className="text-xs text-slate-500">نسخه ۲.۱.۰ | پشتیبانی فنی: ۰۲۱-۸۸۸۸۸۸۸۸</p>
               {isRecoveryMode && (
                   <p className="text-[9px] text-slate-400 mt-2">کد بازیابی دمو: OHS-RECOVERY-2025</p>
               )}

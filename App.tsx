@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Shield, Activity, Search, Plus, LogOut, AlertTriangle, UserPlus, X, Save, FileText, ClipboardList, Stethoscope, Microscope, CheckCircle, Eye, Wind, Ear, ListChecks, Info, UploadCloud, FileSpreadsheet, Users, Sparkles, Loader2, Square, Database, RefreshCw, Key } from 'lucide-react';
 import { User, Worker, Role, Exam, MedicalHistoryItem, OrganSystemFinding, HearingData, SpirometryData, VisionData, HealthAssessment, ReferralStatus } from './types';
@@ -27,7 +26,8 @@ declare global {
   }
 
   interface Window {
-    aistudio: AIStudio;
+    // Making aistudio optional to match potential external declarations and avoid modifier mismatch
+    aistudio?: AIStudio;
   }
 }
 
@@ -131,7 +131,7 @@ const INITIAL_NEW_EXAM_STATE: Omit<Exam, 'id' | 'date'> & { nationalId: string }
   finalOpinion: { status: 'fit', conditions: '', reason: '', recommendations: '' }
 };
 
-const AUDIOMETRY_FREQUENCIES = [250, 500, 1000, 2000, 4000, 8000];
+const APP_VERSION = "۲.۱.۰";
 
 const App = () => {
   const [appState, setAppState] = useState<'license' | 'login' | 'app'>('license');
@@ -490,10 +490,12 @@ const App = () => {
               </div>
               <div>
                   <h1 className="text-xl font-bold text-slate-900 dark:text-white">سیستم مدیریت سلامت شغلی</h1>
-                  <span className="text-xs text-cyan-600 dark:text-cyan-300">
+                  <span className="text-[10px] md:text-xs text-cyan-600 dark:text-cyan-300 flex items-center gap-1">
                     {user.role === 'doctor' ? 'پنل پزشک متخصص طب کار' : 
                      user.role === 'health_officer' ? 'پنل کارشناس بهداشت حرفه‌ای' :
                      user.role === 'manager' ? 'پنل مدیریت' : 'پنل توسعه‌دهنده'}
+                    <span className="opacity-50">|</span>
+                    <span className="bg-slate-100 dark:bg-white/5 px-1.5 rounded">نسخه {APP_VERSION}</span>
                   </span>
               </div>
           </div>
@@ -526,12 +528,24 @@ const App = () => {
             {renderNav()}
           </div>
         )}
-        {/* Content omitted for brevity but maintained in original logic */}
         {activeTab === 'dashboard' && !selectedWorker && user.role !== 'doctor' && <Dashboard workers={workers} onViewCritical={() => setActiveTab('critical_list')} isDark={isDark} />}
         {activeTab === 'worklist' && user.role === 'doctor' && !selectedWorker && <DoctorWorklist workers={workers} onSelectWorker={setSelectedWorker} />}
         {activeTab === 'worker_list' && !selectedWorker && <WorkerList workers={workers} onSelectWorker={setSelectedWorker} onUpdateWorker={handleUpdateWorkerData} />}
         {selectedWorker && !showAssessmentForm && <WorkerProfile worker={selectedWorker} onBack={() => setSelectedWorker(null)} onEdit={handleEditClick} onUpdateStatus={handleUpdateReferralStatus} isDark={isDark} />}
+        {activeTab === 'critical_list' && !selectedWorker && <CriticalCasesList workers={workers} onSelectWorker={setSelectedWorker} onBack={() => setActiveTab('dashboard')} />}
+        {activeTab === 'user_management' && (user.role === 'manager' || user.role === 'developer') && <UserManagement />}
       </main>
+      
+      {showDataManagement && (
+          <DataManagementModal 
+            workers={workers} 
+            onUpdateWorkers={setWorkers} 
+            onClose={() => setShowDataManagement(false)} 
+            lastSync={lastSyncDate}
+            onSyncComplete={(date) => setLastSyncDate(date)}
+          />
+      )}
+
       {user && <ChatWidget />}
     </div>
   );
