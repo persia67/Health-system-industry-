@@ -7,54 +7,63 @@ const LICENSE_KEY = 'ohs_license_v1';
 const TRIAL_DURATION_DAYS = 7;
 const MASTER_RECOVERY_KEY = 'OHS-RECOVERY-2025'; // Master key for demo recovery
 
-// Seed Default Users
+// Seed Default Users (Additive logic)
 const seedUsers = () => {
     try {
-        const existingUsers = localStorage.getItem(USERS_KEY);
+        const usersStr = localStorage.getItem(USERS_KEY);
+        let currentUsers: User[] = [];
         
-        // Only seed if absolutely no data exists
-        if (!existingUsers) {
-            const defaultUsers: User[] = [
-                {
-                    id: 'dev-001',
-                    username: 'admin',
-                    password: '123',
-                    role: 'developer',
-                    name: 'مدیر سیستم',
-                    createdAt: new Date().toISOString()
-                },
-                {
-                    id: 'doc-001',
-                    username: 'doctor',
-                    password: '123',
-                    role: 'doctor',
-                    name: 'دکتر محمدی (پزشک طب کار)',
-                    createdAt: new Date().toISOString()
-                },
-                {
-                    id: 'hse-001',
-                    username: 'hse',
-                    password: '123',
-                    role: 'health_officer',
-                    name: 'مهندس رضایی (کارشناس بهداشت)',
-                    createdAt: new Date().toISOString()
-                }
-            ];
-            localStorage.setItem(USERS_KEY, JSON.stringify(defaultUsers));
-        } else {
-            // Check for data corruption
+        if (usersStr) {
             try {
-                const parsed = JSON.parse(existingUsers);
-                if (!Array.isArray(parsed)) {
-                    console.warn("User data corrupted, resetting to defaults.");
-                    localStorage.removeItem(USERS_KEY);
-                    seedUsers(); // Retry seed
+                const parsed = JSON.parse(usersStr);
+                if (Array.isArray(parsed)) {
+                    currentUsers = parsed;
                 }
             } catch (e) {
-                console.warn("User JSON invalid, resetting to defaults.");
-                localStorage.removeItem(USERS_KEY);
-                seedUsers(); // Retry seed
+                console.warn("User data corrupted, initializing new list.");
             }
+        }
+
+        const defaultUsers: User[] = [
+            {
+                id: 'dev-001',
+                username: 'admin',
+                password: '123',
+                role: 'developer',
+                name: 'مدیر سیستم',
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: 'doc-001',
+                username: 'doctor',
+                password: '123',
+                role: 'doctor',
+                name: 'دکتر محمدی (پزشک طب کار)',
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: 'hse-001',
+                username: 'hse',
+                password: '123',
+                role: 'health_officer',
+                name: 'مهندس رضایی (کارشناس بهداشت)',
+                createdAt: new Date().toISOString()
+            }
+        ];
+
+        let hasChanged = false;
+
+        // Add defaults only if they don't exist by username
+        defaultUsers.forEach(defUser => {
+            const exists = currentUsers.some(u => u.username.toLowerCase() === defUser.username.toLowerCase());
+            if (!exists) {
+                currentUsers.push(defUser);
+                hasChanged = true;
+            }
+        });
+
+        if (hasChanged || !usersStr) {
+            localStorage.setItem(USERS_KEY, JSON.stringify(currentUsers));
         }
     } catch (e) {
         console.error("Storage access failed during seed:", e);
@@ -149,12 +158,16 @@ export const AuthService = {
     deleteUser: (id: string): boolean => {
         try {
             let users = AuthService.getUsers();
-            if (users.find(u => u.id === id)?.role === 'developer') return false; // Cannot delete initial dev
+            const userToDelete = users.find(u => u.id === id);
+            if (!userToDelete) return false;
+            
+            // Protect initial admin/dev accounts from deletion
+            if (['admin', 'doctor', 'hse'].includes(userToDelete.username.toLowerCase())) return false;
             
             const initialLength = users.length;
             users = users.filter(u => u.id !== id);
             
-            if (users.length === initialLength) return false; // User not found
+            if (users.length === initialLength) return false;
 
             localStorage.setItem(USERS_KEY, JSON.stringify(users));
             return true;
@@ -213,7 +226,6 @@ export const AuthService = {
 
     activateLicense: (serial: string): boolean => {
         try {
-            // Mock Validation: Serial must start with "OHS-" and have 16 chars
             if (serial.startsWith('OHS-') && serial.length >= 16) {
                 const newLicense: LicenseInfo = {
                     isActive: true,
