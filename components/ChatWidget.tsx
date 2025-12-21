@@ -1,7 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Bot, User, Loader2 } from 'lucide-react';
-import { ChatSession } from '@google/genai';
+// Use Chat instead of ChatSession
+import { Chat } from '@google/genai';
 import { ChatMessage } from '../types';
 import { createChatSession, sendMessageToGemini } from '../services/geminiService';
 
@@ -10,7 +11,8 @@ const ChatWidget: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [chatSession, setChatSession] = useState<ChatSession | null>(null);
+  // Use Chat instead of ChatSession
+  const [chatSession, setChatSession] = useState<Chat | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

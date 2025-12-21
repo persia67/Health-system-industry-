@@ -1,24 +1,13 @@
-import { GoogleGenAI, ChatSession, GenerateContentResponse } from "@google/genai";
-import { ChatMessage } from "../types";
 
-// NOTE: in a real production app, you should not expose the API key on the client side.
-// This should be proxied through a backend. 
-// For this demo, we assume the env var is available or we use a placeholder.
-const API_KEY = process.env.API_KEY || ''; 
+import { GoogleGenAI, Chat, GenerateContentResponse } from "@google/genai";
 
-let ai: GoogleGenAI | null = null;
-
-const getAIInstance = () => {
-  if (!ai) {
-    ai = new GoogleGenAI({ apiKey: API_KEY });
-  }
-  return ai;
-};
-
-export const createChatSession = (): ChatSession => {
-  const instance = getAIInstance();
-  return instance.chats.create({
-    model: 'gemini-2.5-flash',
+// Use Chat instead of ChatSession to comply with @google/genai types
+export const createChatSession = (): Chat => {
+  // Always create a new instance right before use to ensure the latest API key is used
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
+  return ai.chats.create({
+    model: 'gemini-3-flash-preview',
     config: {
       systemInstruction: `You are an expert Occupational Health Assistant ( دستیار هوشمند سلامت شغلی). 
       You help doctors and health officers analyze worker health data.
@@ -29,15 +18,24 @@ export const createChatSession = (): ChatSession => {
   });
 };
 
-export const sendMessageToGemini = async (chat: ChatSession, message: string): Promise<string> => {
+// Use Chat instead of ChatSession to comply with @google/genai types
+export const sendMessageToGemini = async (chat: Chat, message: string): Promise<string> => {
   try {
+    // Ensuring we have the key before sending
+    if (!process.env.API_KEY) {
+      throw new Error("API_KEY_MISSING");
+    }
+
     const response: GenerateContentResponse = await chat.sendMessage({
       message: message
     });
     
     return response.text || "متاسفانه پاسخی دریافت نشد.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
+    if (error.message === "API_KEY_MISSING") {
+      return "کلید API تنظیم نشده است. لطفاً از طریق منوی تنظیمات کلید را انتخاب کنید.";
+    }
     return "خطا در ارتباط با هوش مصنوعی. لطفا اتصال خود را بررسی کنید.";
   }
 };
