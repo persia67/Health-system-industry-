@@ -5,6 +5,7 @@ import { generateId } from '../utils';
 const USERS_KEY = 'ohs_users_v1';
 const LICENSE_KEY = 'ohs_license_v1';
 const TRIAL_DURATION_DAYS = 7;
+const MASTER_RECOVERY_KEY = 'OHS-RECOVERY-2025'; // Master key for demo recovery
 
 // Seed Default Users
 const seedUsers = () => {
@@ -98,6 +99,31 @@ export const AuthService = {
         const users = AuthService.getUsers();
         const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
         return user || null;
+    },
+
+    recoverPassword: (username: string, recoveryKey: string, newPass: string): { success: boolean, message: string } => {
+        try {
+            const users = AuthService.getUsers();
+            const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
+            
+            if (userIndex === -1) {
+                return { success: false, message: 'کاربری با این نام کاربری یافت نشد.' };
+            }
+
+            // Verify against Master Recovery Key or License Key
+            const license = AuthService.getLicenseInfo();
+            const isValidKey = recoveryKey === MASTER_RECOVERY_KEY || (license.serialKey && recoveryKey === license.serialKey);
+
+            if (!isValidKey) {
+                return { success: false, message: 'کد بازیابی اشتباه است.' };
+            }
+
+            users[userIndex].password = newPass;
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            return { success: true, message: 'رمز عبور با موفقیت تغییر کرد. اکنون وارد شوید.' };
+        } catch (e) {
+            return { success: false, message: 'خطا در عملیات بازیابی.' };
+        }
     },
 
     createUser: (user: Omit<User, 'id' | 'createdAt'>): boolean => {
