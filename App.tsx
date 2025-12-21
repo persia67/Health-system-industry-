@@ -346,6 +346,13 @@ const App = () => {
       }));
   };
 
+  const handleUpdateWorkerData = (id: number, updatedData: Partial<Worker>) => {
+      setWorkers(prev => prev.map(w => w.id === id ? { ...w, ...updatedData } : w));
+      if (selectedWorker && selectedWorker.id === id) {
+          setSelectedWorker(prev => prev ? { ...prev, ...updatedData } : null);
+      }
+  };
+
   const handleEditClick = () => {
     if (selectedWorker) {
         setEditWorkerData({
@@ -359,14 +366,11 @@ const App = () => {
 
   const handleUpdateWorker = () => {
     if (!selectedWorker) return;
-    const updatedWorker = { 
-        ...selectedWorker, 
-        name: editWorkerData.name, 
-        department: editWorkerData.department, 
+    handleUpdateWorkerData(selectedWorker.id, {
+        name: editWorkerData.name,
+        department: editWorkerData.department,
         workYears: Number(editWorkerData.workYears)
-    };
-    setWorkers(prev => prev.map(w => w.id === selectedWorker.id ? updatedWorker : w));
-    setSelectedWorker(updatedWorker);
+    });
     setShowEditWorkerModal(false);
   };
 
@@ -511,8 +515,8 @@ const App = () => {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-6 max-w-md w-full">
             <div className="flex justify-between mb-4"><h3 className="text-xl font-bold">ویرایش پرسنل</h3><X onClick={() => setShowEditWorkerModal(false)} className="cursor-pointer"/></div>
             <div className="space-y-4">
-                <input value={editWorkerData.name} onChange={(e) => setEditWorkerData({...editWorkerData, name: e.target.value})} className="w-full bg-slate-100 dark:bg-slate-800 p-3 rounded-lg text-slate-900 dark:text-white" placeholder="نام" />
-                <input value={editWorkerData.department} onChange={(e) => setEditWorkerData({...editWorkerData, department: e.target.value})} className="w-full bg-slate-100 dark:bg-slate-800 p-3 rounded-lg text-slate-900 dark:text-white" placeholder="واحد" />
+                <input value={editWorkerData.name} onChange={(e) => setEditWorkerData({...editWorkerData, name: e.target.value})} className="w-full bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-slate-900 dark:text-white" placeholder="نام" />
+                <input value={editWorkerData.department} onChange={(e) => setEditWorkerData({...editWorkerData, department: e.target.value})} className="w-full bg-slate-100 dark:bg-slate-900 p-3 rounded-lg text-slate-900 dark:text-white" placeholder="واحد" />
                 <input type="number" value={editWorkerData.workYears} onChange={(e) => setEditWorkerData({...editWorkerData, workYears: Number(e.target.value)})} className="w-full bg-slate-100 dark:bg-slate-800 p-3 rounded-lg text-slate-900 dark:text-white" placeholder="سابقه" />
                 <button onClick={handleUpdateWorker} className="w-full bg-cyan-600 p-3 rounded-xl font-bold text-white mt-4">ذخیره</button>
             </div>
@@ -664,6 +668,7 @@ const App = () => {
                <WorkerList 
                   workers={workers} 
                   onSelectWorker={(w) => setSelectedWorker(w)} 
+                  onUpdateWorker={handleUpdateWorkerData}
                />
             )}
 
