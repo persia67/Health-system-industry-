@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Search, Filter, FileText, User, Users, Edit, X, Save } from 'lucide-react';
+import { Search, Filter, FileText, User, Users, Edit, X, Save, CheckCircle2, Stethoscope, Clock, AlertCircle } from 'lucide-react';
 import { Worker, ReferralStatus } from '../types';
 
 interface Props {
@@ -48,16 +48,22 @@ const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker }
     }
   };
 
-  const statusLabels: Record<string, string> = {
-      none: 'نرمال',
-      waiting_for_doctor: 'منتظر معاینه پزشک',
-      pending_specialist_result: 'منتظر نتیجه متخصص'
-  };
-
-  const statusStyles: Record<string, string> = {
-      none: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
-      waiting_for_doctor: 'bg-cyan-100 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/20',
-      pending_specialist_result: 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20'
+  const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
+      none: { 
+          label: 'نرمال', 
+          color: 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20',
+          icon: CheckCircle2
+      },
+      waiting_for_doctor: { 
+          label: 'منتظر معاینه پزشک', 
+          color: 'bg-cyan-100 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-200 dark:border-cyan-500/20',
+          icon: Stethoscope
+      },
+      pending_specialist_result: { 
+          label: 'منتظر نتیجه متخصص', 
+          color: 'bg-purple-100 dark:bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-500/20',
+          icon: Clock
+      }
   };
 
   return (
@@ -167,51 +173,58 @@ const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker }
         <div className="grid gap-4">
             {filteredWorkers.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-300 dark:border-white/10">
+                    <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
                     موردی یافت نشد.
                 </div>
             ) : (
-                filteredWorkers.map(worker => (
-                    <div key={worker.id} className="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 hover:border-blue-500/30 transition-all shadow-sm dark:shadow-none group">
-                        <div className="flex items-center gap-4 flex-1 w-full">
-                            <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center shrink-0">
-                                <User className="w-6 h-6 text-slate-500 dark:text-slate-300" />
+                filteredWorkers.map(worker => {
+                    const config = statusConfig[worker.referralStatus] || statusConfig.none;
+                    const StatusIcon = config.icon;
+                    
+                    return (
+                        <div key={worker.id} className="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 hover:border-blue-500/30 transition-all shadow-sm dark:shadow-none group">
+                            <div className="flex items-center gap-4 flex-1 w-full text-right">
+                                <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center shrink-0">
+                                    <User className="w-6 h-6 text-slate-500 dark:text-slate-300" />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="font-bold text-slate-900 dark:text-white text-lg">{worker.name}</h4>
+                                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm mt-1 text-slate-500 dark:text-slate-400">
+                                        <span>کد ملی: <span className="font-mono">{worker.nationalId}</span></span>
+                                        <span className="hidden md:inline text-slate-300 dark:text-slate-600">|</span>
+                                        <span>واحد: {worker.department}</span>
+                                        <span className="hidden md:inline text-slate-300 dark:text-slate-600">|</span>
+                                        <span>سابقه: {worker.workYears} سال</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex-1">
-                                <h4 className="font-bold text-slate-900 dark:text-white text-lg">{worker.name}</h4>
-                                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm mt-1 text-slate-500 dark:text-slate-400">
-                                    <span>کد ملی: <span className="font-mono">{worker.nationalId}</span></span>
-                                    <span className="hidden md:inline text-slate-300 dark:text-slate-600">|</span>
-                                    <span>واحد: {worker.department}</span>
-                                    <span className="hidden md:inline text-slate-300 dark:text-slate-600">|</span>
-                                    <span>سابقه: {worker.workYears} سال</span>
+
+                            <div className="flex flex-row-reverse md:flex-row items-center gap-3 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-slate-100 dark:border-white/5 pt-3 md:pt-0">
+                                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border ${config.color} transition-all`}>
+                                    <StatusIcon className="w-3.5 h-3.5" />
+                                    <span>{config.label}</span>
+                                </div>
+                                
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={(e) => handleEditClick(e, worker)}
+                                        className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-all"
+                                        title="ویرایش اطلاعات پایه"
+                                    >
+                                        <Edit className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                        onClick={() => onSelectWorker(worker)}
+                                        className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
+                                    >
+                                        <FileText className="w-4 h-4" />
+                                        پرونده
+                                    </button>
                                 </div>
                             </div>
                         </div>
-
-                        <div className="flex flex-row-reverse md:flex-row items-center gap-3 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-slate-100 dark:border-white/5 pt-3 md:pt-0">
-                            <span className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${statusStyles[worker.referralStatus] || 'bg-slate-100 text-slate-600'}`}>
-                                {statusLabels[worker.referralStatus] || worker.referralStatus}
-                            </span>
-                            
-                            <div className="flex gap-2">
-                                <button 
-                                    onClick={(e) => handleEditClick(e, worker)}
-                                    className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-all"
-                                    title="ویرایش اطلاعات پایه"
-                                >
-                                    <Edit className="w-4 h-4" />
-                                </button>
-                                <button 
-                                    onClick={() => onSelectWorker(worker)}
-                                    className="bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/20 px-4 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
-                                >
-                                    <FileText className="w-4 h-4" />
-                                    پرونده
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ))
+                    );
+                })
             )}
         </div>
     </div>
