@@ -300,11 +300,16 @@ const App = () => {
       const updatedWorkers = [...workers];
       const worker = { ...updatedWorkers[workerIndex] };
       worker.exams = [newExam, ...worker.exams];
-      if (newExam.finalOpinion.status === 'unfit' || newExam.finalOpinion.status === 'conditional') {
-         worker.referralStatus = 'pending_specialist_result';
-      } else {
+      
+      // Referral Logic Update:
+      // If status is 'fit', set referralStatus to 'none'.
+      // If status is 'conditional' or 'unfit', set referralStatus to 'pending_specialist_result'.
+      if (newExam.finalOpinion.status === 'fit') {
          worker.referralStatus = 'none';
+      } else if (newExam.finalOpinion.status === 'conditional' || newExam.finalOpinion.status === 'unfit') {
+         worker.referralStatus = 'pending_specialist_result';
       }
+
       updatedWorkers[workerIndex] = worker;
       setWorkers(updatedWorkers);
       setShowConfirmDialog(false);
