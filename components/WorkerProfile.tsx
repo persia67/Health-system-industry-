@@ -1,11 +1,12 @@
 
 import React, { useRef, useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Bar, AreaChart, Area, ReferenceLine } from 'recharts';
-import { AlertTriangle, Ear, Wind, Heart, FileText, ArrowLeft, Activity, Edit, Eye, TrendingUp, FileDown, Loader2, Info, CheckCircle, Shield, X, Calendar, Activity as CurveIcon } from 'lucide-react';
+import { AlertTriangle, Ear, Wind, Heart, FileText, ArrowLeft, Activity, Edit, Eye, TrendingUp, FileDown, Loader2, Info, CheckCircle, Shield, X, Calendar, Activity as CurveIcon, History, Stethoscope } from 'lucide-react';
 import { Worker, Alert, OrganSystemFinding, ReferralStatus, Exam, SpirometryData } from '../types';
 import { toJalali } from '../utils';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import ExamForm from './ExamForm';
 
 interface WorkerProfileProps {
   worker: Worker;
@@ -32,7 +33,7 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [showSpecialistModal, setShowSpecialistModal] = useState(false);
   const [specialistNote, setSpecialistNote] = useState('');
-  const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
+  const [viewingExam, setViewingExam] = useState<Exam | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
   
   // Helper to generate a Flow-Volume Loop curve for the chart
@@ -186,6 +187,21 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
   return (
     <div className="space-y-6 animate-in slide-in-from-right-8 duration-500">
       
+      {/* View Exam Modal */}
+      {viewingExam && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+             <div className="w-full max-w-6xl max-h-[95vh] overflow-hidden rounded-2xl">
+                 <ExamForm 
+                    initialData={{...viewingExam, nationalId: worker.nationalId}} 
+                    workerName={worker.name}
+                    onSubmit={() => {}} // No-op
+                    onCancel={() => setViewingExam(null)}
+                    readOnly={true}
+                 />
+             </div>
+        </div>
+      )}
+
       {showSpecialistModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
             <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-6 max-w-md w-full">
@@ -378,6 +394,59 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
                     </div>
                 </div>
              </div>
+        </div>
+
+        {/* History List Section */}
+        <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-lg">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                <History className="w-5 h-5 text-blue-500" />
+                تاریخچه معاینات و مراجعات
+            </h3>
+            
+            <div className="space-y-3">
+                {worker.exams.length === 0 ? (
+                    <div className="text-center py-6 text-slate-500">هیچ سابقه‌ای ثبت نشده است.</div>
+                ) : (
+                    worker.exams.map((exam, index) => (
+                        <div key={exam.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 hover:border-blue-500/30 transition-all">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-full text-blue-600 dark:text-blue-400">
+                                    <Stethoscope className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <div className="font-bold text-slate-900 dark:text-white text-lg">
+                                        {index === 0 ? 'معاینه ادواری (آخرین)' : 'معاینه ادواری / سابقه'}
+                                    </div>
+                                    <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1">
+                                        <Calendar className="w-3 h-3" />
+                                        تاریخ: {toJalali(exam.date)}
+                                        {exam.id.startsWith('HIST-') && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full mr-2">وارد شده از اکسل</span>}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                                <div className="text-center md:text-right">
+                                    <div className="text-xs text-slate-500 mb-1">نتیجه نهایی</div>
+                                    <span className={`font-bold px-3 py-1 rounded-lg text-sm ${
+                                        exam.finalOpinion.status === 'fit' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' :
+                                        exam.finalOpinion.status === 'conditional' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400' :
+                                        'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400'
+                                    }`}>
+                                        {exam.finalOpinion.status === 'fit' ? 'بلامانع' : exam.finalOpinion.status === 'conditional' ? 'مشروط' : 'عدم صلاحیت'}
+                                    </span>
+                                </div>
+                                <button 
+                                    onClick={() => setViewingExam(exam)}
+                                    className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-white rounded-lg text-sm font-bold transition-colors"
+                                >
+                                    مشاهده جزئیات
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
         </div>
       </div>
     </div>

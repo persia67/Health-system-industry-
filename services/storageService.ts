@@ -40,7 +40,18 @@ const INITIAL_MOCK_DATA: Worker[] = [
             colorVision: 'Normal', visualField: 'Normal', depthPerception: 'Normal'
         },
         medicalHistory: [],
-        organSystems: {},
+        organSystems: {
+            general: { systemName: 'general', symptoms: [], signs: [], description: '' },
+            eyes: { systemName: 'eyes', symptoms: [], signs: [], description: '' },
+            skin: { systemName: 'skin', symptoms: [], signs: [], description: '' },
+            ent: { systemName: 'ent', symptoms: [], signs: [], description: '' },
+            lungs: { systemName: 'lungs', symptoms: [], signs: [], description: '' },
+            cardio: { systemName: 'cardio', symptoms: [], signs: [], description: '' },
+            digestive: { systemName: 'digestive', symptoms: [], signs: [], description: '' },
+            musculoskeletal: { systemName: 'musculoskeletal', symptoms: [], signs: [], description: '' },
+            neuro: { systemName: 'neuro', symptoms: [], signs: [], description: '' },
+            psych: { systemName: 'psych', symptoms: [], signs: [], description: '' }
+        },
         labResults: {},
         finalOpinion: { status: 'fit' }
       }
@@ -71,7 +82,18 @@ const INITIAL_MOCK_DATA: Worker[] = [
             colorVision: 'Normal', visualField: 'Normal', depthPerception: 'Normal'
         },
         medicalHistory: [],
-        organSystems: {},
+        organSystems: {
+            general: { systemName: 'general', symptoms: [], signs: [], description: '' },
+            eyes: { systemName: 'eyes', symptoms: [], signs: [], description: '' },
+            skin: { systemName: 'skin', symptoms: [], signs: [], description: '' },
+            ent: { systemName: 'ent', symptoms: [], signs: [], description: '' },
+            lungs: { systemName: 'lungs', symptoms: [], signs: [], description: '' },
+            cardio: { systemName: 'cardio', symptoms: [], signs: [], description: '' },
+            digestive: { systemName: 'digestive', symptoms: [], signs: [], description: '' },
+            musculoskeletal: { systemName: 'musculoskeletal', symptoms: [], signs: [], description: '' },
+            neuro: { systemName: 'neuro', symptoms: [], signs: [], description: '' },
+            psych: { systemName: 'psych', symptoms: [], signs: [], description: '' }
+        },
         labResults: {},
         finalOpinion: { status: 'fit' }
       }

@@ -636,7 +636,14 @@ const App = () => {
         )}
         
         {/* VIEW: Dashboards & Lists */}
-        {activeTab === 'dashboard' && !selectedWorker && user.role !== 'doctor' && <Dashboard workers={workers} onViewCritical={() => setActiveTab('critical_list')} isDark={isDark} />}
+        {activeTab === 'dashboard' && !selectedWorker && user.role !== 'doctor' && (
+            <Dashboard 
+                workers={workers} 
+                onViewCritical={() => setActiveTab('critical_list')} 
+                isDark={isDark} 
+                onSelectWorker={setSelectedWorker} // Pass the handler
+            />
+        )}
         {activeTab === 'worker_list' && !selectedWorker && (
             <WorkerList 
                 workers={workers} 

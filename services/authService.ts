@@ -166,6 +166,28 @@ export const AuthService = {
         }
     },
 
+    updateUser: (id: string, updates: Partial<User>): boolean => {
+        try {
+            const users = AuthService.getUsers();
+            const index = users.findIndex(u => u.id === id);
+            if (index === -1) return false;
+
+            // Check username uniqueness if changing username
+            if (updates.username && updates.username.toLowerCase() !== users[index].username.toLowerCase()) {
+                if (users.some(u => u.username.toLowerCase() === updates.username!.toLowerCase())) {
+                    return false; // Username already taken
+                }
+            }
+
+            users[index] = { ...users[index], ...updates };
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            return true;
+        } catch (e) {
+            console.error("Failed to update user:", e);
+            return false;
+        }
+    },
+
     deleteUser: (id: string): boolean => {
         try {
             let users = AuthService.getUsers();

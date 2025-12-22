@@ -1,12 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { Trash2, UserPlus, Shield, User, KeyRound, CheckCircle } from 'lucide-react';
+import { Trash2, UserPlus, Shield, User, KeyRound, CheckCircle, Edit, Save, X } from 'lucide-react';
 import { AuthService } from '../services/authService';
 import { User as UserType, Role } from '../types';
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<UserType[]>([]);
-  const [newUser, setNewUser] = useState({ name: '', username: '', password: '', role: 'health_officer' as Role });
+  const [formData, setFormData] = useState({ name: '', username: '', password: '', role: 'health_officer' as Role });
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -19,24 +20,68 @@ const UserManagement: React.FC = () => {
     setUsers(loaded);
   };
 
-  const handleAddUser = (e: React.FormEvent) => {
+  const resetForm = () => {
+      setFormData({ name: '', username: '', password: '', role: 'health_officer' });
+      setEditingUserId(null);
+      setError('');
+  };
+
+  const handleEditClick = (user: UserType) => {
+      setEditingUserId(user.id);
+      setFormData({
+          name: user.name,
+          username: user.username,
+          password: '', // Password placeholder, empty means no change
+          role: user.role
+      });
+      setError('');
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       setError('');
       setSuccessMsg('');
 
-      if (!newUser.name || !newUser.username || !newUser.password) {
-          setError('لطفا تمام فیلدها را پر کنید');
+      if (!formData.name || !formData.username) {
+          setError('لطفا نام و نام کاربری را وارد کنید');
           return;
       }
-      
-      const success = AuthService.createUser(newUser);
-      if (success) {
-          loadUsers();
-          setNewUser({ name: '', username: '', password: '', role: 'health_officer' });
-          setSuccessMsg('کاربر با موفقیت ایجاد شد.');
-          setTimeout(() => setSuccessMsg(''), 3000);
+
+      if (editingUserId) {
+          // Update Mode
+          const updates: Partial<UserType> = {
+              name: formData.name,
+              username: formData.username,
+              role: formData.role
+          };
+          if (formData.password) {
+              updates.password = formData.password;
+          }
+
+          if (AuthService.updateUser(editingUserId, updates)) {
+              loadUsers();
+              resetForm();
+              setSuccessMsg('کاربر با موفقیت ویرایش شد.');
+              setTimeout(() => setSuccessMsg(''), 3000);
+          } else {
+              setError('نام کاربری تکراری است یا خطایی رخ داده است.');
+          }
+
       } else {
-          setError('نام کاربری تکراری است یا خطایی رخ داده است.');
+          // Create Mode
+          if (!formData.password) {
+              setError('رمز عبور برای کاربر جدید الزامی است');
+              return;
+          }
+          const success = AuthService.createUser(formData);
+          if (success) {
+              loadUsers();
+              resetForm();
+              setSuccessMsg('کاربر با موفقیت ایجاد شد.');
+              setTimeout(() => setSuccessMsg(''), 3000);
+          } else {
+              setError('نام کاربری تکراری است یا خطایی رخ داده است.');
+          }
       }
   };
 
@@ -48,17 +93,6 @@ const UserManagement: React.FC = () => {
               setTimeout(() => setSuccessMsg(''), 3000);
           } else {
               alert('امکان حذف مدیر سیستم وجود ندارد یا کاربر یافت نشد.');
-          }
-      }
-  };
-
-  const handleResetPassword = (id: string, name: string) => {
-      const newPass = prompt(`لطفا رمز عبور جدید برای "${name}" را وارد کنید:`);
-      if (newPass) {
-          if(AuthService.resetPassword(id, newPass)) {
-            alert('رمز عبور با موفقیت تغییر کرد.');
-          } else {
-            alert('خطا در تغییر رمز عبور.');
           }
       }
   };
@@ -93,7 +127,7 @@ const UserManagement: React.FC = () => {
                     </div>
                 )}
                 {users.map(u => (
-                    <div key={u.id} className="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5 flex justify-between items-center shadow-sm dark:shadow-none transition-all hover:border-cyan-500/30">
+                    <div key={u.id} className={`bg-white dark:bg-slate-800/50 p-4 rounded-xl border flex justify-between items-center shadow-sm dark:shadow-none transition-all ${editingUserId === u.id ? 'border-cyan-500 ring-1 ring-cyan-500' : 'border-slate-200 dark:border-white/5 hover:border-cyan-500/30'}`}>
                         <div className="flex items-center gap-4">
                             <div className="w-10 h-10 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
                                 <User className="text-slate-500 dark:text-slate-400 w-6 h-6" />
@@ -110,11 +144,11 @@ const UserManagement: React.FC = () => {
                         </div>
                         <div className="flex gap-2">
                             <button 
-                                onClick={() => handleResetPassword(u.id, u.name)} 
-                                className="p-2 text-amber-500 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/10 rounded-lg transition-colors"
-                                title="تغییر رمز عبور"
+                                onClick={() => handleEditClick(u)} 
+                                className="p-2 text-blue-500 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-500/10 rounded-lg transition-colors"
+                                title="ویرایش"
                             >
-                                <KeyRound className="w-5 h-5" />
+                                <Edit className="w-5 h-5" />
                             </button>
                             {u.role !== 'developer' && (
                                 <button 
@@ -130,13 +164,21 @@ const UserManagement: React.FC = () => {
                 ))}
             </div>
 
-            {/* Add User Form */}
+            {/* Add/Edit User Form */}
             <div className="bg-white dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-white/10 h-fit shadow-xl dark:shadow-none sticky top-24">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                    <UserPlus className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                    افزودن کاربر جدید
-                </h3>
-                <form onSubmit={handleAddUser} className="space-y-4">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        {editingUserId ? <Edit className="w-5 h-5 text-blue-500" /> : <UserPlus className="w-5 h-5 text-emerald-500" />}
+                        {editingUserId ? 'ویرایش کاربر' : 'افزودن کاربر جدید'}
+                    </h3>
+                    {editingUserId && (
+                        <button onClick={resetForm} className="text-xs text-slate-500 flex items-center gap-1 hover:text-slate-800 dark:hover:text-white">
+                            <X className="w-3 h-3" /> انصراف
+                        </button>
+                    )}
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
                     {successMsg && (
                         <div className="bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 p-3 rounded-lg text-sm flex items-center gap-2">
                             <CheckCircle className="w-4 h-4" /> {successMsg}
@@ -148,8 +190,8 @@ const UserManagement: React.FC = () => {
                         <input 
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg p-3 text-slate-900 dark:text-white focus:border-emerald-500 outline-none" 
                             placeholder="مثال: دکتر علوی"
-                            value={newUser.name}
-                            onChange={e => setNewUser({...newUser, name: e.target.value})}
+                            value={formData.name}
+                            onChange={e => setFormData({...formData, name: e.target.value})}
                         />
                     </div>
 
@@ -159,20 +201,22 @@ const UserManagement: React.FC = () => {
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg p-3 text-slate-900 dark:text-white focus:border-emerald-500 outline-none font-sans" 
                             placeholder="username"
                             dir="ltr"
-                            value={newUser.username}
-                            onChange={e => setNewUser({...newUser, username: e.target.value})}
+                            value={formData.username}
+                            onChange={e => setFormData({...formData, username: e.target.value})}
                         />
                     </div>
 
                     <div>
-                         <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">رمز عبور</label>
+                         <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">
+                            {editingUserId ? 'رمز عبور جدید (خالی بگذارید تا تغییر نکند)' : 'رمز عبور'}
+                         </label>
                          <input 
                             type="password"
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg p-3 text-slate-900 dark:text-white focus:border-emerald-500 outline-none font-sans" 
-                            placeholder="••••••"
+                            placeholder={editingUserId ? "بدون تغییر" : "••••••"}
                             dir="ltr"
-                            value={newUser.password}
-                            onChange={e => setNewUser({...newUser, password: e.target.value})}
+                            value={formData.password}
+                            onChange={e => setFormData({...formData, password: e.target.value})}
                         />
                     </div>
 
@@ -180,8 +224,8 @@ const UserManagement: React.FC = () => {
                         <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">نقش کاربری</label>
                         <select 
                             className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg p-3 text-slate-900 dark:text-white focus:border-emerald-500 outline-none"
-                            value={newUser.role}
-                            onChange={e => setNewUser({...newUser, role: e.target.value as Role})}
+                            value={formData.role}
+                            onChange={e => setFormData({...formData, role: e.target.value as Role})}
                         >
                             <option value="health_officer">کارشناس بهداشت حرفه‌ای</option>
                             <option value="doctor">پزشک طب کار</option>
@@ -192,8 +236,9 @@ const UserManagement: React.FC = () => {
 
                     {error && <p className="text-red-500 dark:text-red-400 text-xs">{error}</p>}
                     
-                    <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-emerald-900/20">
-                        ثبت کاربر
+                    <button type="submit" className={`w-full font-bold py-3 rounded-xl transition-colors shadow-lg flex items-center justify-center gap-2 ${editingUserId ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/20' : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/20'} text-white`}>
+                        {editingUserId ? <Save className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                        {editingUserId ? 'ذخیره تغییرات' : 'ثبت کاربر'}
                     </button>
                 </form>
             </div>
