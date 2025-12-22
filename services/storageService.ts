@@ -1,5 +1,6 @@
 
 import { Worker } from '../types';
+import * as XLSX from 'xlsx';
 
 const WORKERS_KEY = 'ohs_workers_data_v1';
 const LAST_SYNC_KEY = 'ohs_last_sync_time';
@@ -9,6 +10,7 @@ const INITIAL_MOCK_DATA: Worker[] = [
   {
     id: 1,
     nationalId: '0123456789',
+    personnelCode: '9001',
     name: 'علی احمدی',
     department: 'وان مذاب',
     workYears: 8,
@@ -47,6 +49,7 @@ const INITIAL_MOCK_DATA: Worker[] = [
   {
     id: 2,
     nationalId: '9876543210',
+    personnelCode: '9002',
     name: 'مریم کریمی',
     department: 'کنترل کیفیت',
     workYears: 4,
@@ -102,15 +105,48 @@ export const StorageService = {
         }
     },
 
-    // Create a JSON backup file
+    // Create a JSON backup file (Full Data)
     createBackup: (workers: Worker[]) => {
         const dataStr = JSON.stringify(workers, null, 2);
         const blob = new Blob([dataStr], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.download = `OHS_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+        link.download = `OHS_Backup_Full_${new Date().toISOString().slice(0, 10)}.json`;
         link.href = url;
         link.click();
+    },
+
+    // Export to Excel (Report format)
+    exportToExcel: (workers: Worker[]) => {
+        // Flatten data for Excel
+        const rows = workers.map(w => {
+            const lastExam = w.exams.length > 0 ? w.exams[0] : null;
+            return {
+                'نام و نام خانوادگی': w.name,
+                'کد ملی': w.nationalId,
+                'کد پرسنلی': w.personnelCode || '-',
+                'واحد سازمانی': w.department,
+                'سابقه کار (سال)': w.workYears,
+                'وضعیت ارجاع': w.referralStatus === 'none' ? 'نرمال' : (w.referralStatus === 'waiting_for_doctor' ? 'منتظر معاینه' : 'منتظر متخصص'),
+                'تاریخ آخرین معاینه': lastExam ? lastExam.date : '-',
+                'وضعیت نهایی': lastExam ? (lastExam.finalOpinion.status === 'fit' ? 'بلامانع' : (lastExam.finalOpinion.status === 'conditional' ? 'مشروط' : 'عدم صلاحیت')) : '-',
+                'فشار خون': lastExam ? lastExam.bp : '-',
+                'تفسیر اسپیرومتری': lastExam ? lastExam.spirometry.interpretation : '-',
+            };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Workers List");
+        
+        // Fix column widths approximately
+        const wscols = [
+            {wch: 20}, {wch: 15}, {wch: 15}, {wch: 20}, {wch: 10}, 
+            {wch: 20}, {wch: 15}, {wch: 15}, {wch: 10}, {wch: 20}
+        ];
+        worksheet['!cols'] = wscols;
+
+        XLSX.writeFile(workbook, `OHS_Export_${new Date().toISOString().slice(0, 10)}.xlsx`);
     },
 
     // Import a JSON backup file
@@ -134,6 +170,14 @@ export const StorageService = {
             };
             reader.readAsText(file);
         });
+    },
+
+    // Factory Reset: Clears workers data and resets to initial mock
+    factoryReset: (): Worker[] => {
+        localStorage.removeItem(WORKERS_KEY);
+        // Note: We deliberately do NOT clear users or license info to prevent lockout
+        localStorage.setItem(WORKERS_KEY, JSON.stringify(INITIAL_MOCK_DATA));
+        return INITIAL_MOCK_DATA;
     },
     
     getLastSync: (): string | null => {

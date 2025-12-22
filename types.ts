@@ -127,6 +127,7 @@ export type ReferralStatus = 'none' | 'waiting_for_doctor' | 'pending_specialist
 export interface Worker {
   id: number;
   nationalId: string;
+  personnelCode?: string; // Added field
   name: string;
   department: string;
   workYears: number;

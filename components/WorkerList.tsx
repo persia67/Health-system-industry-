@@ -1,6 +1,8 @@
+
 import React, { useState } from 'react';
-import { Search, Filter, FileText, User, Users, Edit, X, Save, CheckCircle2, Stethoscope, Clock, AlertCircle, PlusCircle } from 'lucide-react';
+import { Search, Filter, FileText, User, Users, Edit, X, Save, CheckCircle2, Stethoscope, Clock, AlertCircle, PlusCircle, ArrowUpDown, Download, FileSpreadsheet } from 'lucide-react';
 import { Worker, ReferralStatus } from '../types';
+import { StorageService } from '../services/storageService';
 
 interface Props {
   workers: Worker[];
@@ -9,21 +11,57 @@ interface Props {
   onStartExam?: (worker: Worker) => void;
 }
 
+type SortField = 'name' | 'department' | 'personnelCode' | 'none';
+
 const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker, onStartExam }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<ReferralStatus | 'all'>('all');
+  const [sortField, setSortField] = useState<SortField>('none');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingWorker, setEditingWorker] = useState<Worker | null>(null);
-  const [tempData, setTempData] = useState({ name: '', department: '', workYears: 0 });
+  const [tempData, setTempData] = useState({ name: '', department: '', workYears: 0, personnelCode: '' });
 
+  // Filtering Logic
   const filteredWorkers = workers.filter(w => {
     const term = searchTerm.toLowerCase();
-    const matchesSearch = w.name.toLowerCase().includes(term) || w.nationalId.includes(term);
+    const matchesSearch = w.name.toLowerCase().includes(term) || w.nationalId.includes(term) || (w.personnelCode && w.personnelCode.includes(term));
     const matchesStatus = filterStatus === 'all' || w.referralStatus === filterStatus;
     return matchesSearch && matchesStatus;
   });
+
+  // Sorting Logic
+  const sortedWorkers = [...filteredWorkers].sort((a, b) => {
+      if (sortField === 'none') return 0;
+
+      let valA = '';
+      let valB = '';
+
+      if (sortField === 'name') {
+          valA = a.name;
+          valB = b.name;
+      } else if (sortField === 'department') {
+          valA = a.department;
+          valB = b.department;
+      } else if (sortField === 'personnelCode') {
+          valA = a.personnelCode || '';
+          valB = b.personnelCode || '';
+      }
+
+      return sortDirection === 'asc' ? valA.localeCompare(valB, 'fa') : valB.localeCompare(valA, 'fa');
+  });
+
+  const handleSort = (field: SortField) => {
+      if (sortField === field) {
+          // Toggle direction
+          setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+      } else {
+          setSortField(field);
+          setSortDirection('asc');
+      }
+  };
 
   const handleEditClick = (e: React.MouseEvent, worker: Worker) => {
     e.stopPropagation();
@@ -31,7 +69,8 @@ const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker, 
     setTempData({
         name: worker.name,
         department: worker.department,
-        workYears: worker.workYears
+        workYears: worker.workYears,
+        personnelCode: worker.personnelCode || ''
     });
     setIsEditModalOpen(true);
   };
@@ -41,11 +80,16 @@ const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker, 
         onUpdateWorker(editingWorker.id, {
             name: tempData.name,
             department: tempData.department,
-            workYears: tempData.workYears
+            workYears: tempData.workYears,
+            personnelCode: tempData.personnelCode
         });
         setIsEditModalOpen(false);
         setEditingWorker(null);
     }
+  };
+
+  const handleExportExcel = () => {
+      StorageService.exportToExcel(sortedWorkers);
   };
 
   const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
@@ -94,6 +138,15 @@ const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker, 
                             />
                         </div>
                         <div>
+                            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">کد پرسنلی</label>
+                            <input 
+                                type="text" 
+                                value={tempData.personnelCode} 
+                                onChange={(e) => setTempData({...tempData, personnelCode: e.target.value})} 
+                                className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl p-3 text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                            />
+                        </div>
+                        <div>
                             <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">واحد سازمانی</label>
                             <input 
                                 type="text" 
@@ -134,50 +187,83 @@ const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker, 
 
         {/* Header & Filters */}
         <div className="bg-white dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-white/10 mb-6 shadow-sm dark:shadow-none">
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div className="flex flex-col xl:flex-row gap-4 justify-between items-center">
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <Users className="w-6 h-6 text-blue-500" />
                     لیست جامع پرسنل
+                    <span className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs px-2 py-1 rounded-full">{sortedWorkers.length} نفر</span>
                 </h2>
                 
-                <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-                    <div className="relative">
+                <div className="flex flex-col md:flex-row gap-3 w-full xl:w-auto items-center">
+                    {/* Sort Controls */}
+                    <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl">
+                        <button 
+                            onClick={() => handleSort('name')} 
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${sortField === 'name' ? 'bg-white dark:bg-slate-700 shadow text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                        >
+                            نام {sortField === 'name' && <ArrowUpDown className="w-3 h-3" />}
+                        </button>
+                        <button 
+                            onClick={() => handleSort('personnelCode')} 
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${sortField === 'personnelCode' ? 'bg-white dark:bg-slate-700 shadow text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                        >
+                            کد پرسنلی {sortField === 'personnelCode' && <ArrowUpDown className="w-3 h-3" />}
+                        </button>
+                        <button 
+                            onClick={() => handleSort('department')} 
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${sortField === 'department' ? 'bg-white dark:bg-slate-700 shadow text-slate-900 dark:text-white' : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'}`}
+                        >
+                            واحد {sortField === 'department' && <ArrowUpDown className="w-3 h-3" />}
+                        </button>
+                    </div>
+
+                    <div className="w-px h-8 bg-slate-200 dark:bg-white/10 hidden md:block"></div>
+
+                    <div className="relative w-full md:w-auto">
                         <Search className="absolute right-3 top-3 w-4 h-4 text-slate-400" />
                         <input 
                             type="text" 
-                            placeholder="جستجو نام یا کد ملی..." 
+                            placeholder="جستجو نام، کد ملی، کد پرسنلی..." 
                             className="w-full md:w-64 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white"
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
                     
-                    <div className="relative">
+                    <div className="relative w-full md:w-auto">
                         <Filter className="absolute right-3 top-3 w-4 h-4 text-slate-400" />
                         <select 
-                            className="w-full md:w-48 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white appearance-none cursor-pointer"
+                            className="w-full md:w-40 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl py-2.5 pr-10 pl-4 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-white appearance-none cursor-pointer"
                             value={filterStatus}
                             onChange={e => setFilterStatus(e.target.value as ReferralStatus | 'all')}
                         >
                             <option value="all">همه وضعیت‌ها</option>
                             <option value="none">نرمال</option>
-                            <option value="waiting_for_doctor">منتظر معاینه پزشک</option>
-                            <option value="pending_specialist_result">منتظر نتیجه متخصص</option>
+                            <option value="waiting_for_doctor">منتظر معاینه</option>
+                            <option value="pending_specialist_result">منتظر متخصص</option>
                         </select>
                     </div>
+
+                    <button 
+                        onClick={handleExportExcel}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-lg shadow-emerald-500/20 whitespace-nowrap"
+                    >
+                        <FileSpreadsheet className="w-4 h-4" />
+                        خروجی اکسل
+                    </button>
                 </div>
             </div>
         </div>
 
         {/* List */}
         <div className="grid gap-4">
-            {filteredWorkers.length === 0 ? (
+            {sortedWorkers.length === 0 ? (
                 <div className="text-center py-12 text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-300 dark:border-white/10">
                     <AlertCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
                     موردی یافت نشد.
                 </div>
             ) : (
-                filteredWorkers.map(worker => {
+                sortedWorkers.map(worker => {
                     const config = statusConfig[worker.referralStatus] || statusConfig.none;
                     const StatusIcon = config.icon;
                     
@@ -192,6 +278,12 @@ const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker, 
                                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm mt-1 text-slate-500 dark:text-slate-400">
                                         <span>کد ملی: <span className="font-mono">{worker.nationalId}</span></span>
                                         <span className="hidden md:inline text-slate-300 dark:text-slate-600">|</span>
+                                        {worker.personnelCode && (
+                                            <>
+                                                <span>کد پرسنلی: <span className="font-mono text-cyan-600 dark:text-cyan-400 font-bold">{worker.personnelCode}</span></span>
+                                                <span className="hidden md:inline text-slate-300 dark:text-slate-600">|</span>
+                                            </>
+                                        )}
                                         <span>واحد: {worker.department}</span>
                                         <span className="hidden md:inline text-slate-300 dark:text-slate-600">|</span>
                                         <span>سابقه: {worker.workYears} سال</span>
