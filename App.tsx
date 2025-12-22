@@ -13,9 +13,11 @@ import LicenseActivation from './components/LicenseActivation';
 import UserManagement from './components/UserManagement';
 import DataManagementModal from './components/DataManagementModal';
 import ThemeToggle from './components/ThemeToggle';
+import ExamForm from './components/ExamForm';
 import { generateId, toJalali } from './utils';
 import { AuthService } from './services/authService';
 import { StorageService } from './services/storageService';
+import { MEDICAL_HISTORY_QUESTIONS, ORGAN_SYSTEMS_CONFIG } from './constants';
 
 // AI Studio global helpers types
 declare global {
@@ -30,78 +32,6 @@ declare global {
     aistudio?: AIStudio;
   }
 }
-
-const MEDICAL_HISTORY_QUESTIONS = [
-  "آیا سابقه بیماری دارید؟",
-  "در صورت ابتلا به بیماری آیا علایم شما در محیط کار تغییر می کند؟",
-  "در صورت ابتلا به بیماری آیا همکاران شما علایم مشابه در محل کار دارند؟",
-  "در صورت ابتلا به بیماری آیا علایم شما در زمان تعطیلات و مرخصی‌ها تغییر می کند؟",
-  "آیا به غذا، دارو یا ماده خاصی حساسیت دارید؟",
-  "آیا سابقه بستری در بیمارستان دارید؟",
-  "آیا سابقه عمل جراحی دارید؟",
-  "آیا سابقه سرطان یا بیماری مزمن در فامیل دارید؟",
-  "آیا داروی خاصی مصرف می کنید؟",
-  "آیا اکنون سیگار می‌کشید؟",
-  "آیا سابقه قبلی مصرف سیگار دارید؟",
-  "آیا در اوقات فراغت به ورزش یا سرگرمی خاصی مشغول هستید؟",
-  "آیا تاکنون به حادثه شغلی دچار شده اید؟",
-  "آیا سابقه غیبت از کار به دلیل بیماری بیش از 3 روز دارید؟",
-  "آیا منزل شما در مجاورت مرکز صنعتی قرار دارد؟",
-  "آیا سابقه معرفی به کمیسیون پزشکی را دارید؟"
-];
-
-const ORGAN_SYSTEMS_CONFIG = {
-  general: {
-    label: 'عمومی',
-    symptoms: ['کاهش وزن', 'کاهش اشتها', 'خستگی مزمن', 'اختلال خواب', 'تعریق زیاد', 'تب'],
-    signs: ['وضعیت ظاهری (Ill/Toxic)', 'مخاطات رنگ پریده']
-  },
-  eyes: {
-    label: 'چشم',
-    symptoms: ['کاهش بینایی', 'تاری دید', 'خستگی چشم', 'دوبینی', 'سوزش/خارش'],
-    signs: ['رفلکس غیرطبیعی', 'قرمزی', 'اسکلرای ایکتریک', 'نیستاگموس']
-  },
-  skin: {
-    label: 'پوست و مو',
-    symptoms: ['خارش', 'ریزش مو', 'قرمزی', 'تغییر رنگ', 'زخم مزمن'],
-    signs: ['ماکول/پاپول', 'زخم', 'کهیر', 'کلابینگ', 'ریزش مو']
-  },
-  ent: {
-    label: 'گوش، حلق و بینی',
-    symptoms: ['کاهش شنوایی', 'وزوز گوش', 'سرگیجه', 'درد گوش', 'خونریزی بینی'],
-    signs: ['التهاب پرده تمپان', 'پارگی پرده تمپان', 'سرومن', 'پولیپ بینی']
-  },
-  lungs: {
-    label: 'ریه',
-    symptoms: ['سرفه', 'خلط', 'تنگی نفس کوششی', 'خس خس سینه'],
-    signs: ['خشونت صدا', 'ویزینگ', 'کراکل', 'تاکی پنه']
-  },
-  cardio: {
-    label: 'قلب و عروق',
-    symptoms: ['درد قفسه سینه', 'تپش قلب', 'تنگی نفس شبانه', 'سیانوز'],
-    signs: ['S1/S2 غیرطبیعی', 'صدای اضافی', 'آریتمی', 'واریس', 'ادم']
-  },
-  digestive: {
-    label: 'شکم و لگن',
-    symptoms: ['تهوع/استفراغ', 'درد شکم', 'سوزش سر دل', 'اسهال/یبوست'],
-    signs: ['تندرنس شکمی', 'هپاتومگالی', 'اسپلنومگالی', 'توده شکمی']
-  },
-  musculoskeletal: {
-    label: 'اسکلتی و عضلانی',
-    symptoms: ['خشکی مفصل', 'کمر درد', 'درد زانو', 'درد شانه'],
-    signs: ['محدودیت حرکتی', 'کاهش قدرت عضلانی', 'اسکولیوز', 'تست SLR مثبت']
-  },
-  neuro: {
-    label: 'سیستم عصبی',
-    symptoms: ['سردرد', 'گیجی', 'لرزش', 'اختلال حافظه', 'گزگز اندام'],
-    signs: ['رفلکس غیرطبیعی', 'تست رومبرگ مختل', 'ترمور']
-  },
-  psych: {
-    label: 'اعصاب و روان',
-    symptoms: ['عصبانیت', 'پرخاشگری', 'اضطراب', 'خلق پایین'],
-    signs: ['هذیان', 'توهم', 'اختلال اورینتیشن']
-  }
-};
 
 const INITIAL_NEW_EXAM_STATE: Omit<Exam, 'id' | 'date'> & { nationalId: string } = {
   nationalId: '',
@@ -131,7 +61,7 @@ const INITIAL_NEW_EXAM_STATE: Omit<Exam, 'id' | 'date'> & { nationalId: string }
   finalOpinion: { status: 'fit', conditions: '', reason: '', recommendations: '' }
 };
 
-const APP_VERSION = "۲.۱.۰";
+const APP_VERSION = "۲.۱.۱";
 
 const App = () => {
   const [appState, setAppState] = useState<'license' | 'login' | 'app'>('license');
@@ -282,28 +212,28 @@ const App = () => {
       reader.readAsText(file);
   };
 
-  const handleInitiateSaveExam = () => {
-      if (!newExamData.nationalId) return alert("کد ملی الزامی است");
-      const workerIndex = workers.findIndex(w => w.nationalId === newExamData.nationalId);
-      if (workerIndex === -1) return alert("کارگر یافت نشد. لطفا ابتدا پرونده پرسنلی تشکیل دهید.");
-      setShowConfirmDialog(true);
+  // Called from Doctor Worklist "Start Exam" button
+  const handleStartExamForWorker = (worker: Worker) => {
+      setNewExamData({
+          ...INITIAL_NEW_EXAM_STATE,
+          nationalId: worker.nationalId
+      });
+      setActiveTab('newExam');
   };
 
-  const handleConfirmSaveExam = () => {
-      const workerIndex = workers.findIndex(w => w.nationalId === newExamData.nationalId);
-      if (workerIndex === -1) return;
+  const handleConfirmSaveExam = (data: typeof newExamData) => {
+      const workerIndex = workers.findIndex(w => w.nationalId === data.nationalId);
+      if (workerIndex === -1) return alert("کارگر با این کد ملی یافت نشد. لطفا ابتدا در لیست پرسنل ثبت نام کنید.");
       const newExam: Exam = {
           id: generateId(),
           date: new Date().toISOString().split('T')[0],
-          ...newExamData
+          ...data
       };
       const updatedWorkers = [...workers];
       const worker = { ...updatedWorkers[workerIndex] };
       worker.exams = [newExam, ...worker.exams];
       
       // Referral Logic Update:
-      // If status is 'fit', set referralStatus to 'none'.
-      // If status is 'conditional' or 'unfit', set referralStatus to 'pending_specialist_result'.
       if (newExam.finalOpinion.status === 'fit') {
          worker.referralStatus = 'none';
       } else if (newExam.finalOpinion.status === 'conditional' || newExam.finalOpinion.status === 'unfit') {
@@ -315,7 +245,6 @@ const App = () => {
       setShowConfirmDialog(false);
       alert("معاینه با موفقیت ثبت شد");
       setNewExamData(INITIAL_NEW_EXAM_STATE);
-      setFormStep(1);
       setActiveTab('worklist');
   };
 
@@ -364,84 +293,11 @@ const App = () => {
     setShowEditWorkerModal(false);
   };
 
-  const toggleOrganItem = (systemKey: string, type: 'symptoms' | 'signs', item: string) => {
-    setNewExamData(prev => {
-        const system = prev.organSystems[systemKey];
-        const list = system[type];
-        const newList = list.includes(item) ? list.filter(i => i !== item) : [...list, item];
-        return { ...prev, organSystems: { ...prev.organSystems, [systemKey]: { ...system, [type]: newList } } };
-    });
-  };
-
-  const clearOrganSystem = (systemKey: string) => {
-      setNewExamData(prev => ({
-          ...prev,
-          organSystems: {
-              ...prev.organSystems,
-              [systemKey]: { ...prev.organSystems[systemKey], symptoms: [], signs: [] }
-          }
-      }));
-  };
-
-  const updateHistory = (index: number, field: 'hasCondition' | 'description', value: any) => {
-      setNewExamData(prev => {
-          const newHistory = [...prev.medicalHistory];
-          newHistory[index] = { ...newHistory[index], [field]: value };
-          return { ...prev, medicalHistory: newHistory };
-      });
-  };
-
-  const clearMedicalHistory = () => {
-      setNewExamData(prev => ({
-          ...prev,
-          medicalHistory: prev.medicalHistory.map(h => ({ ...h, hasCondition: false, description: '' }))
-      }));
-  };
-
-  const updateAudiometry = (ear: 'left' | 'right', index: number, value: string) => {
-      const numVal = Number(value) || 0;
-      setNewExamData(prev => {
-          const newArr = [...prev.hearing[ear]];
-          newArr[index] = numVal;
-          return { ...prev, hearing: { ...prev.hearing, [ear]: newArr } };
-      });
-  };
-
-  const handleGenerateRecommendation = async () => {
-      setIsGeneratingRecommendation(true);
-      try {
-          const findings = newExamData.medicalHistory.filter(h => h.hasCondition).map(h => h.question).join(', ');
-          const prompt = `
-            به عنوان متخصص طب کار، با توجه به داده‌های زیر یک توصیه نامه کوتاه (Recommendations) برای کارگر بنویس:
-            اسپیرومتری: FVC=${newExamData.spirometry.fvc}, FEV1=${newExamData.spirometry.fev1}, تفسیر=${newExamData.spirometry.interpretation}
-            شنوایی سنجی: ${newExamData.hearing.report || 'بدون گزارش خاص'}
-            سابقه پزشکی: ${findings || 'بدون سابقه'}
-            معاینه بالینی: ${(Object.values(newExamData.organSystems) as OrganSystemFinding[]).filter(sys => sys.signs.length > 0).map(sys => sys.systemName + ': ' + sys.signs.join(',')).join('; ') || 'نرمال'}
-            
-            فقط توصیه‌های کاربردی و خلاصه برای بخش "Final Opinion" بنویس.
-          `;
-          
-          const { createChatSession, sendMessageToGemini } = await import('./services/geminiService');
-          const session = createChatSession();
-          const response = await sendMessageToGemini(session, prompt);
-          setNewExamData(prev => ({
-              ...prev,
-              finalOpinion: { ...prev.finalOpinion, recommendations: response }
-          }));
-
-      } catch (e) {
-          alert("خطا در ارتباط با هوش مصنوعی");
-      } finally {
-          setIsGeneratingRecommendation(false);
-      }
-  };
-
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showEditWorkerModal, setShowEditWorkerModal] = useState(false);
   const [showAssessmentForm, setShowAssessmentForm] = useState(false);
   const [showDataManagement, setShowDataManagement] = useState(false);
   const [editWorkerData, setEditWorkerData] = useState({ name: '', department: '', workYears: 0 });
-  const [formStep, setFormStep] = useState<1 | 2 | 3 | 4>(1); 
   const [newExamData, setNewExamData] = useState(INITIAL_NEW_EXAM_STATE);
   const [newWorkerData, setNewWorkerData] = useState({ nationalId: '', name: '', department: '', workYears: '' });
 
@@ -528,14 +384,44 @@ const App = () => {
       </header>
 
       <main className="container mx-auto px-6 py-8 pb-32">
-        {!selectedWorker && !showAssessmentForm && (
+        {!selectedWorker && !showAssessmentForm && activeTab !== 'newExam' && (
           <div className="flex gap-4 mb-8 overflow-x-auto pb-2">
             {renderNav()}
           </div>
         )}
+        
+        {/* VIEW: New Exam Form (Full Page) */}
+        {activeTab === 'newExam' && (
+            <ExamForm 
+                initialData={newExamData}
+                workerName={workers.find(w => w.nationalId === newExamData.nationalId)?.name}
+                onSubmit={handleConfirmSaveExam}
+                onCancel={() => {
+                    setActiveTab(user.role === 'doctor' ? 'worklist' : 'dashboard');
+                    setNewExamData(INITIAL_NEW_EXAM_STATE);
+                }}
+            />
+        )}
+
+        {/* VIEW: Doctor Worklist */}
+        {activeTab === 'worklist' && user.role === 'doctor' && !selectedWorker && (
+            <DoctorWorklist 
+                workers={workers} 
+                onSelectWorker={setSelectedWorker} 
+                onStartExam={handleStartExamForWorker}
+            />
+        )}
+        
+        {/* VIEW: Dashboards & Lists */}
         {activeTab === 'dashboard' && !selectedWorker && user.role !== 'doctor' && <Dashboard workers={workers} onViewCritical={() => setActiveTab('critical_list')} isDark={isDark} />}
-        {activeTab === 'worklist' && user.role === 'doctor' && !selectedWorker && <DoctorWorklist workers={workers} onSelectWorker={setSelectedWorker} />}
-        {activeTab === 'worker_list' && !selectedWorker && <WorkerList workers={workers} onSelectWorker={setSelectedWorker} onUpdateWorker={handleUpdateWorkerData} />}
+        {activeTab === 'worker_list' && !selectedWorker && (
+            <WorkerList 
+                workers={workers} 
+                onSelectWorker={setSelectedWorker} 
+                onUpdateWorker={handleUpdateWorkerData} 
+                onStartExam={user.role === 'doctor' ? handleStartExamForWorker : undefined}
+            />
+        )}
         {selectedWorker && !showAssessmentForm && <WorkerProfile worker={selectedWorker} onBack={() => setSelectedWorker(null)} onEdit={handleEditClick} onUpdateStatus={handleUpdateReferralStatus} isDark={isDark} />}
         {activeTab === 'critical_list' && !selectedWorker && <CriticalCasesList workers={workers} onSelectWorker={setSelectedWorker} onBack={() => setActiveTab('dashboard')} />}
         {activeTab === 'user_management' && (user.role === 'manager' || user.role === 'developer') && <UserManagement />}

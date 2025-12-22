@@ -6,15 +6,17 @@ import { Worker } from '../types';
 interface Props {
   workers: Worker[];
   onSelectWorker: (worker: Worker) => void;
+  onStartExam?: (worker: Worker) => void;
 }
 
 interface CardProps {
   worker: Worker;
   type: 'exam' | 'result';
   onSelect: (worker: Worker) => void;
+  onStartExam?: (worker: Worker) => void;
 }
 
-const Card: React.FC<CardProps> = ({ worker, type, onSelect }) => (
+const Card: React.FC<CardProps> = ({ worker, type, onSelect, onStartExam }) => (
     <div className="bg-white dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-white/5 hover:border-cyan-500/30 transition-all flex justify-between items-center group shadow-sm dark:shadow-none">
       <div>
         <h4 className="font-bold text-slate-900 dark:text-white text-lg">{worker.name}</h4>
@@ -34,21 +36,29 @@ const Card: React.FC<CardProps> = ({ worker, type, onSelect }) => (
              </div>
         )}
       </div>
-      <button 
-        onClick={() => onSelect(worker)}
-        className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all ${
-            type === 'exam' 
-            ? 'bg-cyan-600 hover:bg-cyan-500 text-white' 
-            : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200'
-        }`}
-      >
-        {type === 'exam' ? 'شروع معاینه' : 'بررسی پرونده'}
-        <ArrowRight className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-      </button>
+      <div className="flex gap-2">
+        {/* Only show Start Exam button for exam type cards and if handler exists */}
+        {type === 'exam' && onStartExam && (
+            <button 
+                onClick={() => onStartExam(worker)}
+                className="px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+            >
+                <Stethoscope className="w-4 h-4" />
+                شروع معاینه
+            </button>
+        )}
+        <button 
+            onClick={() => onSelect(worker)}
+            className="px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 transition-all bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200"
+        >
+            <ArrowRight className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            {type === 'exam' ? 'پروفایل' : 'بررسی'}
+        </button>
+      </div>
     </div>
 );
 
-const DoctorWorklist: React.FC<Props> = ({ workers, onSelectWorker }) => {
+const DoctorWorklist: React.FC<Props> = ({ workers, onSelectWorker, onStartExam }) => {
   const waitingForExam = workers.filter(w => w.referralStatus === 'waiting_for_doctor');
   const pendingSpecialist = workers.filter(w => w.referralStatus === 'pending_specialist_result');
 
@@ -77,7 +87,7 @@ const DoctorWorklist: React.FC<Props> = ({ workers, onSelectWorker }) => {
               <p className="text-slate-500 dark:text-slate-400">موردی برای نمایش وجود ندارد</p>
             </div>
           ) : (
-            waitingForExam.map(w => <Card key={w.id} worker={w} type="exam" onSelect={onSelectWorker} />)
+            waitingForExam.map(w => <Card key={w.id} worker={w} type="exam" onSelect={onSelectWorker} onStartExam={onStartExam} />)
           )}
         </div>
       </div>

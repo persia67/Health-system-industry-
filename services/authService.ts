@@ -4,7 +4,7 @@ import { generateId } from '../utils';
 
 const USERS_KEY = 'ohs_users_v1';
 const LICENSE_KEY = 'ohs_license_v1';
-const TRIAL_DURATION_DAYS = 7;
+const TRIAL_DURATION_DAYS = 30; // Extended trial duration
 const MASTER_RECOVERY_KEY = 'OHS-RECOVERY-2025'; // Master key for demo recovery
 
 // Seed Default Users (Additive logic)
@@ -73,14 +73,25 @@ const seedUsers = () => {
 // Seed License Info
 const seedLicense = () => {
     try {
-        if (!localStorage.getItem(LICENSE_KEY)) {
-            const license: LicenseInfo = {
+        const licenseStr = localStorage.getItem(LICENSE_KEY);
+        let license: LicenseInfo;
+
+        if (!licenseStr) {
+            license = {
                 isActive: true,
                 type: 'trial',
                 activationDate: new Date().toISOString()
             };
-            localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+        } else {
+            license = JSON.parse(licenseStr);
+            // AUTO-FIX: If it's a trial, refresh the activation date to today
+            // to ensure the application is accessible during demo/development.
+            if (license.type === 'trial') {
+                license.activationDate = new Date().toISOString();
+                license.isActive = true;
+            }
         }
+        localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
     } catch (e) {
         console.error("Storage access failed during license seed:", e);
     }

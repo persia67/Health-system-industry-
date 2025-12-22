@@ -1,15 +1,15 @@
-
 import React, { useState } from 'react';
-import { Search, Filter, FileText, User, Users, Edit, X, Save, CheckCircle2, Stethoscope, Clock, AlertCircle } from 'lucide-react';
+import { Search, Filter, FileText, User, Users, Edit, X, Save, CheckCircle2, Stethoscope, Clock, AlertCircle, PlusCircle } from 'lucide-react';
 import { Worker, ReferralStatus } from '../types';
 
 interface Props {
   workers: Worker[];
   onSelectWorker: (worker: Worker) => void;
   onUpdateWorker: (id: number, updatedData: Partial<Worker>) => void;
+  onStartExam?: (worker: Worker) => void;
 }
 
-const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker }) => {
+const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker, onStartExam }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<ReferralStatus | 'all'>('all');
   
@@ -206,6 +206,16 @@ const WorkerList: React.FC<Props> = ({ workers, onSelectWorker, onUpdateWorker }
                                 </div>
                                 
                                 <div className="flex gap-2">
+                                    {onStartExam && (
+                                        <button 
+                                            onClick={() => onStartExam(worker)}
+                                            className="p-2.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 rounded-lg transition-colors flex items-center gap-2"
+                                            title="شروع معاینه"
+                                        >
+                                            <PlusCircle className="w-4 h-4" />
+                                            <span className="text-sm font-bold hidden lg:inline">معاینه</span>
+                                        </button>
+                                    )}
                                     <button 
                                         onClick={(e) => handleEditClick(e, worker)}
                                         className="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 rounded-lg transition-all"
