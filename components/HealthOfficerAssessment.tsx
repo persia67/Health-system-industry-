@@ -82,26 +82,26 @@ const HealthOfficerAssessment: React.FC<Props> = ({ worker, onSave, onCancel }) 
             .join(', ');
 
           const prompt = `
-          به عنوان دستیار هوشمند بهداشت حرفه‌ای، برای کارگری با مشخصات زیر:
+          به عنوان دستیار هوشمند بهداشت حرفه‌ای، لطفا یک تحلیل ریسک شغلی خلاصه انجام دهید برای کارگری با مشخصات زیر:
           شغل/واحد: ${worker.department}
           عوامل زیان‌آور شناسایی شده: ${selectedHazards || 'مورد خاصی انتخاب نشده'}
           توضیحات تکمیلی کارشناس: ${data.description}
 
-          لطفا:
-          1. تجهیزات حفاظت فردی (PPE) پیشنهادی دقیق را لیست کن.
-          2. اگر نکته ایمنی خاصی وجود دارد، کوتاه بنویس.
-          پاسخ کوتاه و کاربردی باشد.
+          لطفا موارد زیر را ارائه دهید:
+          1. تجهیزات حفاظت فردی (PPE) پیشنهادی و ضروری.
+          2. اقدامات کنترلی و نکات ایمنی مهم برای کاهش ریسک.
+          پاسخ کوتاه، موردی و کاملاً کاربردی باشد.
           `;
 
           const session = createChatSession();
           const response = await sendMessageToGemini(session, prompt);
           setData(prev => ({
               ...prev,
-              description: prev.description + '\n\n--- پیشنهاد هوشمند ---\n' + response
+              description: (prev.description ? prev.description + '\n\n' : '') + '--- تحلیل ریسک هوشمند ---\n' + response
           }));
 
       } catch (error) {
-          alert('خطا در ارتباط با هوش مصنوعی');
+          alert('خطا در ارتباط با هوش مصنوعی. لطفا بررسی کنید که کلید API تنظیم شده باشد.');
       } finally {
           setIsAnalyzing(false);
       }
@@ -244,7 +244,7 @@ const HealthOfficerAssessment: React.FC<Props> = ({ worker, onSave, onCancel }) 
                     className="flex items-center gap-2 text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg transition-colors shadow-lg shadow-purple-900/20 disabled:opacity-50"
                 >
                     {isAnalyzing ? <Loader2 className="w-3 h-3 animate-spin"/> : <Sparkles className="w-3 h-3"/>}
-                    تحلیل هوشمند و پیشنهاد PPE
+                    تحلیل ریسک شغلی با هوش مصنوعی
                 </button>
             </div>
           <textarea 
