@@ -1,26 +1,22 @@
 
 import { User, LicenseInfo } from '../types';
 import { generateId } from '../utils';
+import { SecurityService } from './securityService';
 
-const USERS_KEY = 'ohs_users_v1';
-const LICENSE_KEY = 'ohs_license_v1';
-const TRIAL_DURATION_DAYS = 30; // Extended trial duration
-const MASTER_RECOVERY_KEY = 'OHS-RECOVERY-2025'; // Master key for demo recovery
+const USERS_KEY = 'ohs_users_secure_v3';
+const LICENSE_KEY = 'ohs_license_secure_v3';
+const TRIAL_DURATION_DAYS = 30;
+const MASTER_RECOVERY_KEY = 'OHS-RECOVERY-2025';
 
-// Seed Default Users (Additive logic)
 const seedUsers = () => {
     try {
-        const usersStr = localStorage.getItem(USERS_KEY);
+        const encryptedUsers = localStorage.getItem(USERS_KEY);
         let currentUsers: User[] = [];
         
-        if (usersStr) {
-            try {
-                const parsed = JSON.parse(usersStr);
-                if (Array.isArray(parsed)) {
-                    currentUsers = parsed;
-                }
-            } catch (e) {
-                console.warn("User data corrupted, initializing new list.");
+        if (encryptedUsers) {
+            const decrypted = SecurityService.decrypt<User[]>(encryptedUsers);
+            if (decrypted && Array.isArray(decrypted)) {
+                currentUsers = decrypted;
             }
         }
 
@@ -52,8 +48,6 @@ const seedUsers = () => {
         ];
 
         let hasChanged = false;
-
-        // Add defaults only if they don't exist by username
         defaultUsers.forEach(defUser => {
             const exists = currentUsers.some(u => u.username.toLowerCase() === defUser.username.toLowerCase());
             if (!exists) {
@@ -62,15 +56,14 @@ const seedUsers = () => {
             }
         });
 
-        if (hasChanged || !usersStr) {
-            localStorage.setItem(USERS_KEY, JSON.stringify(currentUsers));
+        if (hasChanged || !encryptedUsers) {
+            localStorage.setItem(USERS_KEY, SecurityService.encrypt(currentUsers));
         }
     } catch (e) {
         console.error("Storage access failed during seed:", e);
     }
 };
 
-// Seed License Info
 const seedLicense = () => {
     try {
         const licenseStr = localStorage.getItem(LICENSE_KEY);
@@ -83,15 +76,20 @@ const seedLicense = () => {
                 activationDate: new Date().toISOString()
             };
         } else {
-            license = JSON.parse(licenseStr);
-            // AUTO-FIX: If it's a trial, refresh the activation date to today
-            // to ensure the application is accessible during demo/development.
-            if (license.type === 'trial') {
-                license.activationDate = new Date().toISOString();
-                license.isActive = true;
+            const decrypted = SecurityService.decrypt<LicenseInfo>(licenseStr);
+            if (!decrypted) {
+                 // Tamper detected, reset license
+                 license = { isActive: false, type: 'trial', activationDate: new Date().toISOString() };
+            } else {
+                license = decrypted;
+                if (license.type === 'trial') {
+                    // Refresh logic for demo purposes (remove in production if strict trial needed)
+                    license.activationDate = new Date().toISOString();
+                    license.isActive = true;
+                }
             }
         }
-        localStorage.setItem(LICENSE_KEY, JSON.stringify(license));
+        localStorage.setItem(LICENSE_KEY, SecurityService.encrypt(license));
     } catch (e) {
         console.error("Storage access failed during license seed:", e);
     }
@@ -103,14 +101,12 @@ export const AuthService = {
         seedLicense();
     },
 
-    // --- User Management ---
     getUsers: (): User[] => {
         try {
             const usersStr = localStorage.getItem(USERS_KEY);
             if (!usersStr) return [];
-            return JSON.parse(usersStr);
+            return SecurityService.decrypt<User[]>(usersStr) || [];
         } catch (e) {
-            console.error("Failed to load users:", e);
             return [];
         }
     },
@@ -130,7 +126,6 @@ export const AuthService = {
                 return { success: false, message: 'کاربری با این نام کاربری یافت نشد.' };
             }
 
-            // Verify against Master Recovery Key or License Key
             const license = AuthService.getLicenseInfo();
             const isValidKey = recoveryKey === MASTER_RECOVERY_KEY || (license.serialKey && recoveryKey === license.serialKey);
 
@@ -139,7 +134,7 @@ export const AuthService = {
             }
 
             users[userIndex].password = newPass;
-            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            localStorage.setItem(USERS_KEY, SecurityService.encrypt(users));
             return { success: true, message: 'رمز عبور با موفقیت تغییر کرد. اکنون وارد شوید.' };
         } catch (e) {
             return { success: false, message: 'خطا در عملیات بازیابی.' };
@@ -149,7 +144,7 @@ export const AuthService = {
     createUser: (user: Omit<User, 'id' | 'createdAt'>): boolean => {
         try {
             const users = AuthService.getUsers();
-            if (users.some(u => u.username.toLowerCase() === user.username.toLowerCase())) return false; // Duplicate
+            if (users.some(u => u.username.toLowerCase() === user.username.toLowerCase())) return false;
             
             const newUser: User = {
                 ...user,
@@ -158,10 +153,9 @@ export const AuthService = {
             };
             
             users.push(newUser);
-            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            localStorage.setItem(USERS_KEY, SecurityService.encrypt(users));
             return true;
         } catch (e) {
-            console.error("Failed to create user:", e);
             return false;
         }
     },
@@ -172,18 +166,16 @@ export const AuthService = {
             const index = users.findIndex(u => u.id === id);
             if (index === -1) return false;
 
-            // Check username uniqueness if changing username
             if (updates.username && updates.username.toLowerCase() !== users[index].username.toLowerCase()) {
                 if (users.some(u => u.username.toLowerCase() === updates.username!.toLowerCase())) {
-                    return false; // Username already taken
+                    return false;
                 }
             }
 
             users[index] = { ...users[index], ...updates };
-            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            localStorage.setItem(USERS_KEY, SecurityService.encrypt(users));
             return true;
         } catch (e) {
-            console.error("Failed to update user:", e);
             return false;
         }
     },
@@ -194,7 +186,6 @@ export const AuthService = {
             const userToDelete = users.find(u => u.id === id);
             if (!userToDelete) return false;
             
-            // Protect initial admin/dev accounts from deletion
             if (['admin', 'doctor', 'hse'].includes(userToDelete.username.toLowerCase())) return false;
             
             const initialLength = users.length;
@@ -202,41 +193,24 @@ export const AuthService = {
             
             if (users.length === initialLength) return false;
 
-            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            localStorage.setItem(USERS_KEY, SecurityService.encrypt(users));
             return true;
         } catch (e) {
-            console.error("Failed to delete user:", e);
             return false;
         }
     },
 
-    resetPassword: (id: string, newPass: string): boolean => {
-        try {
-            const users = AuthService.getUsers();
-            const userIndex = users.findIndex(u => u.id === id);
-            if (userIndex === -1) return false;
-
-            users[userIndex].password = newPass;
-            localStorage.setItem(USERS_KEY, JSON.stringify(users));
-            return true;
-        } catch (e) {
-            console.error("Failed to reset password:", e);
-            return false;
-        }
-    },
-
-    // --- License Management ---
     getLicenseInfo: (): LicenseInfo => {
         try {
             const licenseStr = localStorage.getItem(LICENSE_KEY);
             if (!licenseStr) {
                 seedLicense();
-                const retry = localStorage.getItem(LICENSE_KEY);
-                return retry ? JSON.parse(retry) : { isActive: false, type: 'trial', activationDate: '' };
+                return { isActive: false, type: 'trial', activationDate: '' };
             }
             
-            const license: LicenseInfo = JSON.parse(licenseStr);
-            
+            const license = SecurityService.decrypt<LicenseInfo>(licenseStr);
+            if (!license) return { isActive: false, type: 'trial', activationDate: '' };
+
             if (license.type === 'trial') {
                 const activationDate = new Date(license.activationDate);
                 const now = new Date();
@@ -252,21 +226,21 @@ export const AuthService = {
             }
             return license;
         } catch (e) {
-             console.error("Failed to get license info:", e);
              return { isActive: false, type: 'trial', activationDate: '' };
         }
     },
 
     activateLicense: (serial: string): boolean => {
         try {
-            if (serial.startsWith('OHS-') && serial.length >= 16) {
+            // New Secure Verification logic
+            if (SecurityService.verifyLicenseSignature(serial)) {
                 const newLicense: LicenseInfo = {
                     isActive: true,
                     type: 'full',
                     activationDate: new Date().toISOString(),
                     serialKey: serial
                 };
-                localStorage.setItem(LICENSE_KEY, JSON.stringify(newLicense));
+                localStorage.setItem(LICENSE_KEY, SecurityService.encrypt(newLicense));
                 return true;
             }
             return false;

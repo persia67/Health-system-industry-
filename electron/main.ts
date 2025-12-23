@@ -5,16 +5,6 @@ import { fileURLToPath } from 'node:url'
 // Fix for __dirname in ESM context or missing types
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// The built directory structure
-//
-// ├─┬ dist-electron
-// │ ├─┬ main
-// │ │ └── index.js    > Electron-Main
-// │ └─┬ preload
-// │   └── index.js    > Preload-Scripts
-// ├─┬ dist
-// │ └── index.html    > Render-Process
-//
 process.env.DIST = path.join(__dirname, '../dist')
 process.env.VITE_PUBLIC = app.isPackaged ? process.env.DIST : path.join(__dirname, '../public')
 
@@ -31,8 +21,9 @@ function createWindow() {
     minHeight: 600,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
-      nodeIntegration: true,
-      contextIsolation: false, // For simple apps/local storage access flexibility
+      // SECURITY HARDENING:
+      nodeIntegration: false, // Prevent renderer from accessing Node.js directly
+      contextIsolation: true, // Protect against prototype pollution and RCE
     },
   })
 

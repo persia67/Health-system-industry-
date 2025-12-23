@@ -53,6 +53,7 @@ export interface VisionData {
 
 export interface MedicalHistoryItem {
   id: number;
+  category: string; // Added category for grouping
   question: string;
   hasCondition: boolean;
   description: string;
@@ -89,6 +90,13 @@ export interface Exam {
   id: string;
   date: string;
   
+  // Vital Signs
+  height?: number; // cm
+  weight?: number; // kg
+  bmi?: number;
+  pulse?: number;
+  bp: string; // "120/80"
+
   // Section 4: History
   medicalHistory: MedicalHistoryItem[];
   
@@ -98,7 +106,6 @@ export interface Exam {
   // Section 6 & 7: Paraclinical
   hearing: HearingData;
   vision?: VisionData; // New Vision Section
-  bp: string; // "120/80"
   spirometry: SpirometryData;
   labResults: LabResults;
   

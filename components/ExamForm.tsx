@@ -1,6 +1,5 @@
-
-import React, { useState, useEffect } from 'react';
-import { Save, X, FileText, Activity, Eye, Ear, Wind, Stethoscope, ClipboardList, Beaker, CheckSquare, Search } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Save, X, FileText, Activity, Eye, Ear, Wind, Stethoscope, ClipboardList, Beaker, CheckSquare, Search, Ruler, Weight, Heart } from 'lucide-react';
 import { Exam, MedicalHistoryItem, OrganSystemFinding, HearingData, SpirometryData, VisionData, LabResults, FinalOpinion } from '../types';
 import { ORGAN_SYSTEMS_CONFIG } from '../constants';
 
@@ -61,11 +60,33 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
     }));
   };
 
+  // BMI Calculation
+  useEffect(() => {
+    if (!readOnly && formData.height && formData.weight) {
+        const heightM = formData.height / 100;
+        const bmi = parseFloat((formData.weight / (heightM * heightM)).toFixed(1));
+        if (bmi !== formData.bmi) {
+            updateState('bmi', bmi);
+        }
+    }
+  }, [formData.height, formData.weight]);
+
+  // Group medical history items by category
+  const groupedHistory = useMemo(() => {
+    const groups: Record<string, MedicalHistoryItem[]> = {};
+    formData.medicalHistory.forEach(item => {
+        const cat = item.category || 'سایر موارد';
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(item);
+    });
+    return groups;
+  }, [formData.medicalHistory]);
+
   const sections = [
-    { id: 'history', label: 'سوابق پزشکی (History)', Icon: ClipboardList },
-    { id: 'organs', label: 'معاینات اندامی (Physical Exam)', Icon: Stethoscope },
-    { id: 'paraclinical', label: 'پاراکلینیک (Paraclinical)', Icon: Activity },
-    { id: 'final', label: 'نظریه نهایی (Final Opinion)', Icon: CheckSquare },
+    { id: 'history', label: 'سوابق (History)', Icon: ClipboardList },
+    { id: 'organs', label: 'معاینات (Physical)', Icon: Stethoscope },
+    { id: 'paraclinical', label: 'پاراکلینیک (Labs)', Icon: Activity },
+    { id: 'final', label: 'نظریه نهایی (Final)', Icon: CheckSquare },
   ];
 
   return (
@@ -84,7 +105,6 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
                 <span className="hidden md:inline">|</span>
                 <div className="flex items-center gap-2">
                     <span>کد ملی:</span>
-                    {/* Allow editing National ID if it was initially empty (New Exam mode) */}
                     <input 
                         type="text" 
                         value={formData.nationalId}
@@ -132,6 +152,10 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
                         <span>فشار خون:</span>
                         <span className="font-mono">{formData.bp || '-'}</span>
                     </div>
+                     <div className="flex justify-between">
+                        <span>BMI:</span>
+                        <span className="font-mono">{formData.bmi || '-'}</span>
+                    </div>
                     <div className="flex justify-between">
                         <span>اسپیرومتری:</span>
                         <span className={`font-bold ${formData.spirometry.interpretation === 'Normal' ? 'text-emerald-500' : 'text-red-500'}`}>{formData.spirometry.interpretation}</span>
@@ -148,37 +172,43 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
             {activeSection === 'history' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                     <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 border-b pb-2">۱. سوابق پزشکی و شغلی (History)</h3>
-                    {formData.medicalHistory.length === 0 ? (
-                        <div className="text-center py-10 text-slate-400 italic">هیچ سابقه‌ای ثبت نشده است (یا داده وارداتی خلاصه است)</div>
+                    
+                    {Object.keys(groupedHistory).length === 0 ? (
+                        <div className="text-center py-10 text-slate-400 italic">هیچ سابقه‌ای ثبت نشده است</div>
                     ) : (
-                        <div className="grid gap-4">
-                            {formData.medicalHistory.map((item) => (
-                                <div key={item.id} className={`p-4 rounded-xl border transition-colors ${item.hasCondition ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-500/30' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-white/5'}`}>
-                                    <div className="flex items-start gap-3">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={item.hasCondition}
-                                            onChange={(e) => handleHistoryChange(item.id, 'hasCondition', e.target.checked)}
-                                            className="mt-1 w-5 h-5 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 disabled:opacity-50"
-                                        />
-                                        <div className="flex-1">
-                                            <label className="font-medium text-slate-900 dark:text-white cursor-pointer" onClick={() => !readOnly && handleHistoryChange(item.id, 'hasCondition', !item.hasCondition)}>
-                                                {item.question}
-                                            </label>
-                                            {item.hasCondition && (
+                        Object.entries(groupedHistory).map(([category, items]) => (
+                             <div key={category} className="bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 border border-slate-200 dark:border-white/5">
+                                <h4 className="font-bold text-cyan-700 dark:text-cyan-400 mb-3 text-sm border-b border-slate-200 dark:border-white/5 pb-1">{category}</h4>
+                                <div className="grid md:grid-cols-2 gap-3">
+                                    {(items as MedicalHistoryItem[]).map((item) => (
+                                        <div key={item.id} className={`p-3 rounded-lg border transition-colors ${item.hasCondition ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-500/30' : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-white/5'}`}>
+                                            <div className="flex items-start gap-3">
                                                 <input 
-                                                    type="text" 
-                                                    placeholder="توضیحات تکمیلی (اجباری)..."
-                                                    value={item.description}
-                                                    onChange={(e) => handleHistoryChange(item.id, 'description', e.target.value)}
-                                                    className="mt-3 w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg p-2 text-sm focus:border-red-500 outline-none disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-500"
+                                                    type="checkbox" 
+                                                    checked={item.hasCondition}
+                                                    onChange={(e) => handleHistoryChange(item.id, 'hasCondition', e.target.checked)}
+                                                    className="mt-1 w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500 disabled:opacity-50"
                                                 />
-                                            )}
+                                                <div className="flex-1">
+                                                    <label className="text-sm font-medium text-slate-900 dark:text-white cursor-pointer" onClick={() => !readOnly && handleHistoryChange(item.id, 'hasCondition', !item.hasCondition)}>
+                                                        {item.question}
+                                                    </label>
+                                                    {item.hasCondition && (
+                                                        <input 
+                                                            type="text" 
+                                                            placeholder="توضیحات (دارو، سال ابتلا و...)"
+                                                            value={item.description}
+                                                            onChange={(e) => handleHistoryChange(item.id, 'description', e.target.value)}
+                                                            className="mt-2 w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-md p-1.5 text-xs focus:border-red-500 outline-none"
+                                                        />
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                             </div>
+                        ))
                     )}
                 </div>
             )}
@@ -186,23 +216,41 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
             {/* 2. Organ Systems */}
             {activeSection === 'organs' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div className="flex justify-between items-center border-b pb-2">
+                    <div className="flex flex-col md:flex-row justify-between items-end md:items-center border-b pb-2 gap-4">
                         <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">۲. معاینات اندامی (Physical Examination)</h3>
-                        <div className="flex items-center gap-2">
-                             <span className="text-sm font-bold text-slate-600 dark:text-slate-300">فشار خون:</span>
-                             <input 
-                                type="text" 
-                                placeholder="120/80" 
-                                dir="ltr"
-                                value={formData.bp}
-                                onChange={(e) => updateState('bp', e.target.value)}
-                                className="w-24 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-1 text-center font-mono disabled:opacity-70"
-                             />
-                        </div>
+                    </div>
+
+                    {/* Vital Signs Panel */}
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-500/20 mb-4">
+                         <h4 className="text-sm font-bold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
+                            <Activity className="w-4 h-4" /> علایم حیاتی (Vital Signs)
+                         </h4>
+                         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                             <div>
+                                 <label className="text-xs text-slate-500 mb-1 block flex items-center gap-1"><Ruler className="w-3 h-3"/> قد (cm)</label>
+                                 <input type="number" placeholder="175" value={formData.height || ''} onChange={(e) => updateState('height', parseFloat(e.target.value))} className="w-full p-2 rounded-lg border text-center bg-white dark:bg-slate-800" />
+                             </div>
+                             <div>
+                                 <label className="text-xs text-slate-500 mb-1 block flex items-center gap-1"><Weight className="w-3 h-3"/> وزن (kg)</label>
+                                 <input type="number" placeholder="75" value={formData.weight || ''} onChange={(e) => updateState('weight', parseFloat(e.target.value))} className="w-full p-2 rounded-lg border text-center bg-white dark:bg-slate-800" />
+                             </div>
+                             <div>
+                                 <label className="text-xs text-slate-500 mb-1 block flex items-center gap-1"><Activity className="w-3 h-3"/> BMI</label>
+                                 <input type="number" readOnly value={formData.bmi || ''} className="w-full p-2 rounded-lg border text-center bg-slate-100 dark:bg-slate-700 font-bold" />
+                             </div>
+                              <div>
+                                 <label className="text-xs text-slate-500 mb-1 block flex items-center gap-1"><Heart className="w-3 h-3"/> نبض (PR)</label>
+                                 <input type="number" placeholder="72" value={formData.pulse || ''} onChange={(e) => updateState('pulse', parseFloat(e.target.value))} className="w-full p-2 rounded-lg border text-center bg-white dark:bg-slate-800" />
+                             </div>
+                             <div>
+                                 <label className="text-xs text-slate-500 mb-1 block">فشار خون (BP)</label>
+                                 <input type="text" placeholder="120/80" dir="ltr" value={formData.bp} onChange={(e) => updateState('bp', e.target.value)} className="w-full p-2 rounded-lg border text-center bg-white dark:bg-slate-800 font-mono" />
+                             </div>
+                         </div>
                     </div>
                     
                     <div className="grid md:grid-cols-2 gap-6">
-                        {Object.entries(ORGAN_SYSTEMS_CONFIG).map(([key, config]) => {
+                        {Object.entries(ORGAN_SYSTEMS_CONFIG).map(([key, config]: [string, any]) => {
                             // SAFE ACCESS: Default to empty structure if key is missing
                             const systemData = formData.organSystems[key] || { 
                                 systemName: key, 
@@ -212,21 +260,21 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
                             };
                             return (
                                 <div key={key} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-xl p-4 shadow-sm">
-                                    <h4 className="font-bold text-cyan-700 dark:text-cyan-400 mb-3 border-b border-slate-100 dark:border-white/5 pb-2">
+                                    <h4 className="font-bold text-cyan-700 dark:text-cyan-400 mb-3 border-b border-slate-100 dark:border-white/5 pb-2 text-sm">
                                         {config.label}
                                     </h4>
                                     
                                     <div className="space-y-4">
                                         {/* Symptoms Checkbox List */}
                                         <div>
-                                            <span className="text-xs font-bold text-slate-500 mb-2 block">علائم (Symptoms)</span>
-                                            <div className="flex flex-wrap gap-2">
-                                                {config.symptoms.map(s => (
+                                            <span className="text-[10px] font-bold text-slate-500 mb-1 block">علائم (Symptoms)</span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {config.symptoms.map((s: string) => (
                                                     <button 
                                                         key={s}
                                                         disabled={readOnly}
                                                         onClick={() => handleOrganChange(key, 'symptoms', s)}
-                                                        className={`text-xs px-2 py-1 rounded border transition-colors ${systemData.symptoms?.includes(s) ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border-red-300 dark:border-red-500/30' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 disabled:opacity-50'}`}
+                                                        className={`text-[10px] px-2 py-1 rounded border transition-colors ${systemData.symptoms?.includes(s) ? 'bg-red-100 dark:bg-red-500/20 text-red-700 dark:text-red-300 border-red-300 dark:border-red-500/30' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 disabled:opacity-50'}`}
                                                     >
                                                         {s}
                                                     </button>
@@ -236,14 +284,14 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
 
                                         {/* Signs Checkbox List */}
                                         <div>
-                                            <span className="text-xs font-bold text-slate-500 mb-2 block">نشانه‌ها (Signs)</span>
-                                            <div className="flex flex-wrap gap-2">
-                                                {config.signs.map(s => (
+                                            <span className="text-[10px] font-bold text-slate-500 mb-1 block">نشانه‌ها (Signs)</span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {config.signs.map((s: string) => (
                                                     <button 
                                                         key={s}
                                                         disabled={readOnly}
                                                         onClick={() => handleOrganChange(key, 'signs', s)}
-                                                        className={`text-xs px-2 py-1 rounded border transition-colors ${systemData.signs?.includes(s) ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/30' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 disabled:opacity-50'}`}
+                                                        className={`text-[10px] px-2 py-1 rounded border transition-colors ${systemData.signs?.includes(s) ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-500/30' : 'bg-slate-50 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 disabled:opacity-50'}`}
                                                     >
                                                         {s}
                                                     </button>
@@ -256,14 +304,13 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
                                             value={systemData.description}
                                             onChange={(e) => {
                                                 const newSystems = { ...formData.organSystems };
-                                                // Ensure key exists before setting description
                                                 if (!newSystems[key]) {
                                                      newSystems[key] = { systemName: key, symptoms: [], signs: [], description: '' };
                                                 }
                                                 newSystems[key].description = e.target.value;
                                                 updateState('organSystems', newSystems);
                                             }}
-                                            className="w-full text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg p-2 min-h-[60px] disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-600"
+                                            className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg p-2 min-h-[50px] disabled:bg-slate-100 dark:disabled:bg-slate-800 disabled:text-slate-600"
                                         />
                                     </div>
                                 </div>

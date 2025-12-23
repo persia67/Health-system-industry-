@@ -18,7 +18,7 @@ import ExamForm from './components/ExamForm';
 import { generateId, toJalali } from './utils';
 import { AuthService } from './services/authService';
 import { StorageService } from './services/storageService';
-import { MEDICAL_HISTORY_QUESTIONS, ORGAN_SYSTEMS_CONFIG } from './constants';
+import { FLATTENED_HISTORY_QUESTIONS, ORGAN_SYSTEMS_CONFIG } from './constants';
 import * as XLSX from 'xlsx';
 
 // AI Studio global helpers types
@@ -37,6 +37,10 @@ declare global {
 
 const INITIAL_NEW_EXAM_STATE: Omit<Exam, 'id' | 'date'> & { nationalId: string } = {
   nationalId: '',
+  height: undefined,
+  weight: undefined,
+  bmi: undefined,
+  pulse: undefined,
   hearing: { 
       left: [0,0,0,0,0,0], 
       right: [0,0,0,0,0,0],
@@ -54,7 +58,13 @@ const INITIAL_NEW_EXAM_STATE: Omit<Exam, 'id' | 'date'> & { nationalId: string }
       visualField: 'Normal',
       depthPerception: ''
   },
-  medicalHistory: MEDICAL_HISTORY_QUESTIONS.map((q, idx) => ({ id: idx, question: q, hasCondition: false, description: '' })),
+  medicalHistory: FLATTENED_HISTORY_QUESTIONS.map((item) => ({ 
+      id: item.id, 
+      category: item.category,
+      question: item.question, 
+      hasCondition: false, 
+      description: '' 
+  })),
   organSystems: Object.keys(ORGAN_SYSTEMS_CONFIG).reduce((acc, key) => ({
     ...acc,
     [key]: { systemName: key, symptoms: [], signs: [], description: '' }
