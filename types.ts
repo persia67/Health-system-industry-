@@ -18,6 +18,14 @@ export interface LicenseInfo {
   serialKey?: string;
 }
 
+export interface OccupationalHistoryEntry {
+  id: string;
+  company: string;
+  jobTitle: string;
+  years: number;
+  hazards: string;
+}
+
 // Audiometry frequencies: 250, 500, 1000, 2000, 4000, 8000 Hz
 export interface HearingData {
   left: number[];  // Array of 6 values corresponding to frequencies (Air Conduction)
@@ -97,8 +105,9 @@ export interface Exam {
   pulse?: number;
   bp: string; // "120/80"
 
-  // Section 4: History
+  // History Sections
   medicalHistory: MedicalHistoryItem[];
+  occupationalHistory: OccupationalHistoryEntry[];
   
   // Section 5: Organ Systems
   organSystems: Record<string, OrganSystemFinding>;

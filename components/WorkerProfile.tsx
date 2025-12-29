@@ -1,7 +1,7 @@
 
 import React, { useRef, useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart, Bar, AreaChart, Area, ReferenceLine } from 'recharts';
-import { AlertTriangle, Ear, Wind, Heart, FileText, ArrowLeft, Activity, Edit, Eye, TrendingUp, FileDown, Loader2, Info, CheckCircle, Shield, X, Calendar, Activity as CurveIcon, History, Stethoscope } from 'lucide-react';
+import { AlertTriangle, Ear, Wind, Heart, FileText, ArrowLeft, Activity, Edit, Eye, TrendingUp, FileDown, Loader2, Info, CheckCircle, Shield, X, Calendar, Activity as CurveIcon, History, Stethoscope, Briefcase } from 'lucide-react';
 import { Worker, Alert, OrganSystemFinding, ReferralStatus, Exam, SpirometryData } from '../types';
 import { toJalali } from '../utils';
 import html2canvas from 'html2canvas';
@@ -15,19 +15,6 @@ interface WorkerProfileProps {
   onUpdateStatus?: (id: number, status: ReferralStatus, note?: string) => void;
   isDark: boolean;
 }
-
-const SYSTEM_LABELS: Record<string, string> = {
-  general: 'عمومی',
-  eyes: 'چشم',
-  skin: 'پوست و مو',
-  ent: 'گوش، حلق و بینی',
-  lungs: 'ریه',
-  cardio: 'قلب و عروق',
-  digestive: 'شکم و لگن',
-  musculoskeletal: 'اسکلتی و عضلانی',
-  neuro: 'سیستم عصبی',
-  psych: 'اعصاب و روان'
-};
 
 const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, onUpdateStatus, isDark }) => {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
@@ -55,7 +42,6 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
     }
 
     // 2. Descending limb (from PEF to FVC)
-    // The shape of the descending limb is critical for diagnosis
     const steps = 15;
     for (let i = 1; i <= steps; i++) {
       const v = vPef + (i * (fvc - vPef) / steps);
@@ -63,13 +49,10 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
       
       let flow;
       if (!isPredicted && interpretation === 'Obstructive') {
-        // Scooped-out appearance: concave curve
         flow = pef * Math.pow(1 - x, 2); 
       } else if (!isPredicted && interpretation === 'Restrictive') {
-        // Linear but steep decline
         flow = pef * (1 - x);
       } else {
-        // Normal/Predicted: Slightly convex to linear
         flow = pef * (1 - Math.pow(x, 0.8));
       }
       
@@ -87,43 +70,29 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
     let result = 'Normal';
     let color = 'text-emerald-500 dark:text-emerald-400';
     let badgeBg = 'bg-emerald-100 dark:bg-emerald-500/20';
-    let explanation = 'عملکرد ریوی در محدوده طبیعی قرار دارد.';
-    let details = 'نتایج اسپیرومتری نشان‌دهنده عملکرد طبیعی ریه است. نسبت FEV1/FVC و ظرفیت حیاتی (FVC) در محدوده نرمال قرار دارند.';
 
     const isObstructive = ratio < 70;
     const isRestrictive = fvc < 3.5;
 
     if (isObstructive && isRestrictive) {
       result = 'Mixed';
-      color = 'text-red-500 dark:text-red-400';
-      badgeBg = 'bg-red-100 dark:bg-red-500/20';
-      explanation = `الگوی ترکیبی (Mixed)`;
     } else if (isObstructive) {
       result = 'Obstructive';
-      color = 'text-orange-500 dark:text-orange-400';
-      badgeBg = 'bg-orange-100 dark:bg-orange-500/20';
-      explanation = `الگوی انسدادی (Obstructive)`;
     } else if (isRestrictive) {
       result = 'Restrictive';
-      color = 'text-amber-500 dark:text-amber-400';
-      badgeBg = 'bg-amber-100 dark:bg-amber-500/20';
-      explanation = `الگوی محدودکننده (Restrictive)`;
     }
 
-    return { result, explanation, details, ratio: ratio.toFixed(0), color, badgeBg };
+    return { result, ratio: ratio.toFixed(0), color, badgeBg };
   };
 
   const latestExam = worker.exams[0];
-  const baseExam = worker.exams[worker.exams.length - 1];
   const spiroStatus = latestExam ? analyzeSpirometry(latestExam.spirometry.fvc, latestExam.spirometry.fev1) : null;
 
-  // Generate data for the Flow-Volume Loop Chart
   const flowVolumeData = useMemo(() => {
     if (!latestExam) return [];
     const measured = generateSpiroLoopData(latestExam.spirometry, false);
     const predicted = generateSpiroLoopData(latestExam.spirometry, true);
     
-    // Merge for chart
     return measured.map((m, i) => ({
         volume: m.volume,
         measured: m.flow,
@@ -276,7 +245,7 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
                     </div>
                 </div>
 
-                {/* FLOW-VOLUME LOOP CHART (The one from the image) */}
+                {/* FLOW-VOLUME LOOP CHART */}
                 <div className="bg-white dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-lg relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-3 opacity-5">
                         <CurveIcon className="w-24 h-24" />
@@ -303,48 +272,41 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
                                     stroke={chartTextColor}
                                     tick={{fontSize: 10}}
                                 />
-                                <Tooltip 
-                                    contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, fontSize: '10px' }} 
-                                    formatter={(value: any) => [`${value} L/s`, 'Flow']}
-                                    labelFormatter={(label) => `Volume: ${label} L`}
-                                />
+                                <Tooltip contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, fontSize: '10px' }} />
                                 <Legend iconType="plainUnderline" wrapperStyle={{fontSize: '11px', paddingTop: '10px'}} />
-                                {/* Predicted Curve (Dashed) */}
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="predicted" 
-                                    name="Predicted (نرمال)" 
-                                    stroke={isDark ? '#94a3b8' : '#cbd5e1'} 
-                                    strokeDasharray="5 5" 
-                                    dot={false} 
-                                    strokeWidth={1}
-                                />
-                                {/* Measured Curve (Solid Bold) */}
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="measured" 
-                                    name="PRE (اندازه‌گیری)" 
-                                    stroke="#10b981" 
-                                    strokeWidth={3} 
-                                    dot={false}
-                                    activeDot={{ r: 6 }}
-                                />
-                                {/* Normal Threshold Reference at Peak */}
-                                <ReferenceLine y={8} stroke="#ef4444" strokeDasharray="3 3" label={{ position: 'right', value: 'Min PEF', fill: '#ef4444', fontSize: 8 }} />
+                                <Line type="monotone" dataKey="predicted" name="Predicted (نرمال)" stroke={isDark ? '#94a3b8' : '#cbd5e1'} strokeDasharray="5 5" dot={false} strokeWidth={1} />
+                                <Line type="monotone" dataKey="measured" name="PRE (اندازه‌گیری)" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
                             </LineChart>
                         </ResponsiveContainer>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-2 text-[10px]">
-                        <div className="bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded border border-emerald-100 dark:border-emerald-500/20">
-                            <span className="text-slate-500">تفسیر گرافیکی: </span>
-                            <span className="font-bold text-emerald-700 dark:text-emerald-400">{spiroStatus?.result}</span>
-                        </div>
-                        <div className="bg-blue-50 dark:bg-blue-500/10 p-2 rounded border border-blue-100 dark:border-blue-500/20">
-                            <span className="text-slate-500">نقطه اوج (PEF): </span>
-                            <span className="font-bold text-blue-700 dark:text-blue-400">{latestExam?.spirometry.pef} L/s</span>
-                        </div>
-                    </div>
                 </div>
+            </div>
+
+            {/* Occupational History Display */}
+            <div className="bg-white dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-white/10 shadow-lg">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-blue-500" />
+                سوابق شغلی و مواجهه قبلی
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {latestExam?.occupationalHistory && latestExam.occupationalHistory.length > 0 ? (
+                  latestExam.occupationalHistory.map((entry) => (
+                    <div key={entry.id} className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-white/5 relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold px-2 rounded-bl-lg">
+                        {entry.years} سال سابقه
+                      </div>
+                      <h4 className="font-bold text-slate-800 dark:text-slate-200">{entry.company}</h4>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">{entry.jobTitle}</p>
+                      <div className="mt-3 p-2 bg-white dark:bg-slate-800 rounded border border-slate-100 dark:border-white/5">
+                        <span className="text-[10px] text-slate-500 block mb-1">عوامل زیان‌آور:</span>
+                        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{entry.hazards || 'موردی ذکر نشده'}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-full py-6 text-center text-slate-400 italic text-sm">سابقه شغلی قبلی ثبت نشده است.</div>
+                )}
+              </div>
             </div>
 
             {/* Health Trends Section */}
@@ -420,7 +382,6 @@ const WorkerProfile: React.FC<WorkerProfileProps> = ({ worker, onBack, onEdit, o
                                     <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1">
                                         <Calendar className="w-3 h-3" />
                                         تاریخ: {toJalali(exam.date)}
-                                        {exam.id.startsWith('HIST-') && <span className="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full mr-2">وارد شده از اکسل</span>}
                                     </div>
                                 </div>
                             </div>

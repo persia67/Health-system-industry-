@@ -41,6 +41,8 @@ const INITIAL_MOCK_DATA: Worker[] = [
             colorVision: 'Normal', visualField: 'Normal', depthPerception: 'Normal'
         },
         medicalHistory: [],
+        // Fix: Added missing occupationalHistory property to comply with Exam interface
+        occupationalHistory: [],
         organSystems: {
             general: { systemName: 'general', symptoms: [], signs: [], description: '' },
             eyes: { systemName: 'eyes', symptoms: [], signs: [], description: '' },

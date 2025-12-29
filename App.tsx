@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Shield, Activity, Search, Plus, LogOut, AlertTriangle, UserPlus, X, Save, FileText, ClipboardList, Stethoscope, Microscope, CheckCircle, Eye, Wind, Ear, ListChecks, Info, UploadCloud, FileSpreadsheet, Users, Sparkles, Loader2, Square, Database, RefreshCw, Key } from 'lucide-react';
-import { User, Worker, Role, Exam, MedicalHistoryItem, OrganSystemFinding, HearingData, SpirometryData, VisionData, HealthAssessment, ReferralStatus, FinalOpinion } from './types';
+import { User, Worker, Role, Exam, MedicalHistoryItem, OrganSystemFinding, HearingData, SpirometryData, VisionData, HealthAssessment, ReferralStatus, FinalOpinion, OccupationalHistoryEntry } from './types';
 import Dashboard from './components/Dashboard';
 import WorkerProfile from './components/WorkerProfile';
 import ChatWidget from './components/ChatWidget';
@@ -65,6 +65,7 @@ const INITIAL_NEW_EXAM_STATE: Omit<Exam, 'id' | 'date'> & { nationalId: string }
       hasCondition: false, 
       description: '' 
   })),
+  occupationalHistory: [],
   organSystems: Object.keys(ORGAN_SYSTEMS_CONFIG).reduce((acc, key) => ({
     ...acc,
     [key]: { systemName: key, symptoms: [], signs: [], description: '' }
@@ -144,6 +145,7 @@ const App = () => {
               id: `HIST-${Date.now()}-${index}`,
               date: '2024-03-20', // Default approx for 1403 start, or convert current date
               medicalHistory: [],
+              occupationalHistory: [],
               organSystems: {},
               hearing: { 
                   left: [0,0,0,0,0,0], right: [0,0,0,0,0,0], 

@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import { Save, X, FileText, Activity, Eye, Ear, Wind, Stethoscope, ClipboardList, Beaker, CheckSquare, Search, Ruler, Weight, Heart } from 'lucide-react';
-import { Exam, MedicalHistoryItem, OrganSystemFinding, HearingData, SpirometryData, VisionData, LabResults, FinalOpinion } from '../types';
+import { Save, X, FileText, Activity, Eye, Ear, Wind, Stethoscope, ClipboardList, Beaker, CheckSquare, Search, Ruler, Weight, Heart, Briefcase, Plus, Trash2 } from 'lucide-react';
+import { Exam, MedicalHistoryItem, OrganSystemFinding, HearingData, SpirometryData, VisionData, LabResults, FinalOpinion, OccupationalHistoryEntry } from '../types';
 import { ORGAN_SYSTEMS_CONFIG } from '../constants';
+import { generateId } from '../utils';
 
 interface Props {
   initialData: Omit<Exam, 'id' | 'date'> & { nationalId: string };
@@ -32,6 +34,31 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
       h.id === id ? { ...h, [field]: value } : h
     );
     updateState('medicalHistory', newHistory);
+  };
+
+  const handleAddOccHistory = () => {
+    if (readOnly) return;
+    const newEntry: OccupationalHistoryEntry = {
+      id: generateId(),
+      company: '',
+      jobTitle: '',
+      years: 1,
+      hazards: ''
+    };
+    updateState('occupationalHistory', [...formData.occupationalHistory, newEntry]);
+  };
+
+  const handleRemoveOccHistory = (id: string) => {
+    if (readOnly) return;
+    updateState('occupationalHistory', formData.occupationalHistory.filter(e => e.id !== id));
+  };
+
+  const updateOccHistory = (id: string, field: keyof OccupationalHistoryEntry, value: any) => {
+    if (readOnly) return;
+    const updated = formData.occupationalHistory.map(e => 
+      e.id === id ? { ...e, [field]: value } : e
+    );
+    updateState('occupationalHistory', updated);
   };
 
   const handleOrganChange = (systemKey: string, type: 'symptoms' | 'signs', item: string) => {
@@ -84,6 +111,7 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
 
   const sections = [
     { id: 'history', label: 'سوابق (History)', Icon: ClipboardList },
+    { id: 'occ_history', label: 'سوابق شغلی (Job History)', Icon: Briefcase },
     { id: 'organs', label: 'معاینات (Physical)', Icon: Stethoscope },
     { id: 'paraclinical', label: 'پاراکلینیک (Labs)', Icon: Activity },
     { id: 'final', label: 'نظریه نهایی (Final)', Icon: CheckSquare },
@@ -143,25 +171,6 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
                     </button>
                 ))}
             </div>
-            
-            {/* Quick Summary Preview */}
-            <div className="p-4 mt-4 border-t border-slate-200 dark:border-white/5">
-                <h4 className="text-xs font-bold text-slate-500 mb-2">خلاصه وضعیت</h4>
-                <div className="text-xs space-y-1 text-slate-600 dark:text-slate-400">
-                    <div className="flex justify-between">
-                        <span>فشار خون:</span>
-                        <span className="font-mono">{formData.bp || '-'}</span>
-                    </div>
-                     <div className="flex justify-between">
-                        <span>BMI:</span>
-                        <span className="font-mono">{formData.bmi || '-'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span>اسپیرومتری:</span>
-                        <span className={`font-bold ${formData.spirometry.interpretation === 'Normal' ? 'text-emerald-500' : 'text-red-500'}`}>{formData.spirometry.interpretation}</span>
-                    </div>
-                </div>
-            </div>
         </div>
 
         {/* Form Content */}
@@ -171,12 +180,9 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
             {/* 1. Medical History */}
             {activeSection === 'history' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 border-b pb-2">۱. سوابق پزشکی و شغلی (History)</h3>
+                    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200 border-b pb-2">۱. سوابق پزشکی و عادت‌ها (History)</h3>
                     
-                    {Object.keys(groupedHistory).length === 0 ? (
-                        <div className="text-center py-10 text-slate-400 italic">هیچ سابقه‌ای ثبت نشده است</div>
-                    ) : (
-                        Object.entries(groupedHistory).map(([category, items]) => (
+                    {Object.entries(groupedHistory).map(([category, items]) => (
                              <div key={category} className="bg-slate-50/50 dark:bg-slate-800/30 rounded-xl p-4 border border-slate-200 dark:border-white/5">
                                 <h4 className="font-bold text-cyan-700 dark:text-cyan-400 mb-3 text-sm border-b border-slate-200 dark:border-white/5 pb-1">{category}</h4>
                                 <div className="grid md:grid-cols-2 gap-3">
@@ -209,8 +215,92 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
                                 </div>
                              </div>
                         ))
-                    )}
+                    }
                 </div>
+            )}
+
+            {/* Occupational History Section */}
+            {activeSection === 'occ_history' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="flex justify-between items-center border-b pb-2">
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-slate-200">سوابق شغلی و مواجهه (Occupational Exposure History)</h3>
+                  {!readOnly && (
+                    <button 
+                      onClick={handleAddOccHistory}
+                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-blue-900/20"
+                    >
+                      <Plus className="w-4 h-4" /> افزودن سابقه شغلی
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  {formData.occupationalHistory.length === 0 ? (
+                    <div className="text-center py-20 bg-slate-50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-300 dark:border-white/10">
+                      <Briefcase className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                      <p className="text-slate-500">سابقه‌ای ثبت نشده است. در صورت وجود سوابق کاری قبلی، آنها را اضافه کنید.</p>
+                    </div>
+                  ) : (
+                    formData.occupationalHistory.map((entry, index) => (
+                      <div key={entry.id} className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-200 dark:border-white/5 relative group">
+                        {!readOnly && (
+                          <button 
+                            onClick={() => handleRemoveOccHistory(entry.id)}
+                            className="absolute top-4 left-4 p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        <div className="grid md:grid-cols-12 gap-4">
+                          <div className="md:col-span-1">
+                            <span className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center font-bold text-slate-600 dark:text-slate-400">
+                              {index + 1}
+                            </span>
+                          </div>
+                          <div className="md:col-span-4">
+                            <label className="text-[10px] font-bold text-slate-500 mb-1 block">نام شرکت / صنعت</label>
+                            <input 
+                              type="text" 
+                              value={entry.company}
+                              onChange={(e) => updateOccHistory(entry.id, 'company', e.target.value)}
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg p-2 text-sm"
+                              placeholder="مثال: فولاد مبارکه"
+                            />
+                          </div>
+                          <div className="md:col-span-4">
+                            <label className="text-[10px] font-bold text-slate-500 mb-1 block">عنوان شغلی</label>
+                            <input 
+                              type="text" 
+                              value={entry.jobTitle}
+                              onChange={(e) => updateOccHistory(entry.id, 'jobTitle', e.target.value)}
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg p-2 text-sm"
+                              placeholder="مثال: جوشکار"
+                            />
+                          </div>
+                          <div className="md:col-span-3">
+                            <label className="text-[10px] font-bold text-slate-500 mb-1 block">مدت (سال)</label>
+                            <input 
+                              type="number" 
+                              value={entry.years}
+                              onChange={(e) => updateOccHistory(entry.id, 'years', parseInt(e.target.value))}
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg p-2 text-sm"
+                            />
+                          </div>
+                          <div className="md:col-span-11 md:offset-1">
+                            <label className="text-[10px] font-bold text-slate-500 mb-1 block">عوامل زیان‌آور (صدا، شیمیایی، ارگونومی و...)</label>
+                            <textarea 
+                              value={entry.hazards}
+                              onChange={(e) => updateOccHistory(entry.id, 'hazards', e.target.value)}
+                              className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg p-2 text-sm h-16"
+                              placeholder="توضیح دهید..."
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
 
             {/* 2. Organ Systems */}
@@ -251,7 +341,6 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
                     
                     <div className="grid md:grid-cols-2 gap-6">
                         {Object.entries(ORGAN_SYSTEMS_CONFIG).map(([key, config]: [string, any]) => {
-                            // SAFE ACCESS: Default to empty structure if key is missing
                             const systemData = formData.organSystems[key] || { 
                                 systemName: key, 
                                 symptoms: [], 
@@ -265,7 +354,6 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
                                     </h4>
                                     
                                     <div className="space-y-4">
-                                        {/* Symptoms Checkbox List */}
                                         <div>
                                             <span className="text-[10px] font-bold text-slate-500 mb-1 block">علائم (Symptoms)</span>
                                             <div className="flex flex-wrap gap-1.5">
@@ -282,7 +370,6 @@ const ExamForm: React.FC<Props> = ({ initialData, workerName, onSubmit, onCancel
                                             </div>
                                         </div>
 
-                                        {/* Signs Checkbox List */}
                                         <div>
                                             <span className="text-[10px] font-bold text-slate-500 mb-1 block">نشانه‌ها (Signs)</span>
                                             <div className="flex flex-wrap gap-1.5">
