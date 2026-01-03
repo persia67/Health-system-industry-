@@ -80,5 +80,27 @@ export const SecurityService = {
     } catch (e) {
         return false;
     }
+  },
+
+  // Generate a valid license key based on the same salt logic
+  generateLicenseKey: (): string => {
+      // 1. Generate Random Data Part (4 chars alphanumeric)
+      const dataPart = Math.random().toString(36).substring(2, 6).toUpperCase().padEnd(4, '0');
+      
+      // 2. Calculate Signature (Must match verify logic)
+      let hash = 0;
+      const str = dataPart + SECRET_SALT;
+      for (let i = 0; i < str.length; i++) {
+          const char = str.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
+      }
+      const signaturePart = Math.abs(hash).toString(16).substring(0, 4).toUpperCase();
+
+      // 3. Generate Random Suffix
+      const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase().padEnd(4, 'X');
+
+      // 4. Construct Key: OHS-DATA-SIGN-RAND
+      return `OHS-${dataPart}-${signaturePart}-${randomSuffix}`;
   }
 };

@@ -18,6 +18,14 @@ export interface LicenseInfo {
   serialKey?: string;
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  contactPerson?: string;
+  licenseKey: string;
+  createdAt: string;
+}
+
 export interface OccupationalHistoryEntry {
   id: string;
   company: string;

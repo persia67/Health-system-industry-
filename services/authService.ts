@@ -1,10 +1,11 @@
 
-import { User, LicenseInfo } from '../types';
+import { User, LicenseInfo, Organization } from '../types';
 import { generateId } from '../utils';
 import { SecurityService } from './securityService';
 
 const USERS_KEY = 'ohs_users_secure_v3';
 const LICENSE_KEY = 'ohs_license_secure_v3';
+const ORGS_KEY = 'ohs_orgs_secure_v3';
 const TRIAL_DURATION_DAYS = 30;
 const MASTER_RECOVERY_KEY = 'OHS-RECOVERY-2025';
 
@@ -248,5 +249,39 @@ export const AuthService = {
             console.error("Failed to activate license:", e);
             return false;
         }
+    },
+
+    // Organization & License Generation Methods
+    getOrganizations: (): Organization[] => {
+        try {
+            const orgsStr = localStorage.getItem(ORGS_KEY);
+            if (!orgsStr) return [];
+            return SecurityService.decrypt<Organization[]>(orgsStr) || [];
+        } catch (e) {
+            return [];
+        }
+    },
+
+    addOrganization: (org: Omit<Organization, 'id' | 'licenseKey' | 'createdAt'>): Organization => {
+        const orgs = AuthService.getOrganizations();
+        const newOrg: Organization = {
+            id: generateId(),
+            name: org.name,
+            contactPerson: org.contactPerson,
+            licenseKey: SecurityService.generateLicenseKey(),
+            createdAt: new Date().toISOString()
+        };
+        orgs.push(newOrg);
+        localStorage.setItem(ORGS_KEY, SecurityService.encrypt(orgs));
+        return newOrg;
+    },
+
+    deleteOrganization: (id: string): boolean => {
+        let orgs = AuthService.getOrganizations();
+        const initialLen = orgs.length;
+        orgs = orgs.filter(o => o.id !== id);
+        if (orgs.length === initialLen) return false;
+        localStorage.setItem(ORGS_KEY, SecurityService.encrypt(orgs));
+        return true;
     }
 };

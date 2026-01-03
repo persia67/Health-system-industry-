@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Activity, Search, Plus, LogOut, AlertTriangle, UserPlus, X, Save, FileText, ClipboardList, Stethoscope, Microscope, CheckCircle, Eye, Wind, Ear, ListChecks, Info, UploadCloud, FileSpreadsheet, Users, Sparkles, Loader2, Square, Database, RefreshCw, Key } from 'lucide-react';
+import { Shield, Activity, Search, Plus, LogOut, AlertTriangle, UserPlus, X, Save, FileText, ClipboardList, Stethoscope, Microscope, CheckCircle, Eye, Wind, Ear, ListChecks, Info, UploadCloud, FileSpreadsheet, Users, Sparkles, Loader2, Square, Database, RefreshCw, Key, Building2 } from 'lucide-react';
 import { User, Worker, Role, Exam, MedicalHistoryItem, OrganSystemFinding, HearingData, SpirometryData, VisionData, HealthAssessment, ReferralStatus, FinalOpinion, OccupationalHistoryEntry } from './types';
 import Dashboard from './components/Dashboard';
 import WorkerProfile from './components/WorkerProfile';
@@ -12,6 +12,7 @@ import WorkerList from './components/WorkerList';
 import Login from './components/Login';
 import LicenseActivation from './components/LicenseActivation';
 import UserManagement from './components/UserManagement';
+import OrganizationManagement from './components/OrganizationManagement';
 import DataManagementModal from './components/DataManagementModal';
 import ThemeToggle from './components/ThemeToggle';
 import ExamForm from './components/ExamForm';
@@ -79,7 +80,7 @@ const APP_VERSION = "۲.۳.۰";
 const App = () => {
   const [appState, setAppState] = useState<'license' | 'login' | 'app'>('license');
   const [user, setUser] = useState<User | null>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'worker_list' | 'newExam' | 'newWorker' | 'worklist' | 'critical_list' | 'user_management'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'worker_list' | 'newExam' | 'newWorker' | 'worklist' | 'critical_list' | 'user_management' | 'org_management'>('dashboard');
   const [hasApiKey, setHasApiKey] = useState<boolean>(true);
   
   const [workers, setWorkers] = useState<Worker[]>([]); 
@@ -470,6 +471,7 @@ const App = () => {
               <>
                 <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'dashboard' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><Activity className="w-5 h-5" />داشبورد کل</button>
                 <button onClick={() => setActiveTab('user_management')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'user_management' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><Users className="w-5 h-5" />مدیریت کاربران</button>
+                <button onClick={() => setActiveTab('org_management')} className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'org_management' ? 'bg-cyan-600 hover:bg-cyan-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700'}`}><Building2 className="w-5 h-5" />سازمان‌ها (لایسنس)</button>
                 {baseNav}
               </>
           );
@@ -667,6 +669,7 @@ const App = () => {
         {selectedWorker && !showAssessmentForm && <WorkerProfile worker={selectedWorker} onBack={() => setSelectedWorker(null)} onEdit={handleEditClick} onUpdateStatus={handleUpdateReferralStatus} isDark={isDark} />}
         {activeTab === 'critical_list' && !selectedWorker && <CriticalCasesList workers={workers} onSelectWorker={setSelectedWorker} onBack={() => setActiveTab('dashboard')} />}
         {activeTab === 'user_management' && (user.role === 'manager' || user.role === 'developer') && <UserManagement />}
+        {activeTab === 'org_management' && (user.role === 'manager' || user.role === 'developer') && <OrganizationManagement />}
       </main>
       
       {showDataManagement && (
