@@ -1,35 +1,26 @@
+
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Occupational Health System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Vazirmatn', 'sans-serif'],
-            },
-            colors: {
-              slate: {
-                850: '#151e2e',
-                900: '#0f172a',
-                950: '#020617',
-              }
-            }
-          },
-        },
-      }
-    </script>
     <style>
       body {
-        font-family: 'Vazirmatn', sans-serif;
+        font-family: 'Tahoma', 'Segoe UI', sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f8fafc;
+        color: #0f172a;
       }
-      /* Custom scrollbar for better aesthetics */
+      * {
+        box-sizing: border-box;
+      }
+      button {
+        cursor: pointer;
+        font-family: inherit;
+      }
+      /* Scrollbar */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
@@ -37,21 +28,24 @@
       ::-webkit-scrollbar-track {
         background: rgba(0, 0, 0, 0.05);
       }
-      .dark ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.05);
-      }
       ::-webkit-scrollbar-thumb {
         background: rgba(0, 0, 0, 0.2);
         border-radius: 4px;
       }
-      .dark ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.2);
-      }
       ::-webkit-scrollbar-thumb:hover {
         background: rgba(0, 0, 0, 0.3);
       }
-      .dark ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.3);
+      
+      /* Dark mode simulation class */
+      body.dark {
+        background-color: #020617;
+        color: #f1f5f9;
+      }
+      body.dark ::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      body.dark ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
       }
     </style>
   <script type="importmap">
@@ -61,7 +55,6 @@
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
     "recharts": "https://aistudiocdn.com/recharts@^3.5.1",
     "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1",
     "jspdf": "https://aistudiocdn.com/jspdf@^2.5.1",
@@ -69,7 +62,8 @@
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "vite": "https://esm.sh/vite@^7.3.0",
     "electron": "https://esm.sh/electron@^39.2.7",
-    "vite-plugin-electron/": "https://esm.sh/vite-plugin-electron@^0.29.0/"
+    "vite-plugin-electron/": "https://esm.sh/vite-plugin-electron@^0.29.0/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0"
   }
 }
 </script>
